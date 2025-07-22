@@ -1,13 +1,21 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { useRouter } from 'next/navigation';
+
+export type Transaction = {
+  id: string;
+  type: 'stake' | 'withdraw' | 'task' | 'login_bonus';
+  amount: number;
+  date: string;
+  description: string;
+};
 
 interface User {
   uid: string;
   tokenBalance: number;
   stakedBalance: number;
   tasksCompleted: { [key: string]: boolean };
+  transactions: Transaction[];
 }
 
 interface UserContextType {
@@ -42,11 +50,19 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const login = (uid: string) => {
+    const newTransaction: Transaction = {
+      id: `tx_${Date.now()}`,
+      type: 'login_bonus',
+      amount: 1000,
+      date: new Date().toISOString(),
+      description: 'Welcome bonus for signing up',
+    };
     const newUser: User = {
       uid,
       tokenBalance: 1000,
       stakedBalance: 0,
       tasksCompleted: {},
+      transactions: [newTransaction],
     };
     localStorage.setItem('tokenTycoonUser', JSON.stringify(newUser));
     setUser(newUser);
@@ -69,16 +85,25 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   };
   
   const stakeTokens = async (orderId: string): Promise<boolean> => {
-    if (!user || user.tokenBalance < 0.05) return false; // This check is symbolic as we don't convert to USDT here.
+    if (!user) return false;
     
     // Simulate API call for approval
     await new Promise(resolve => setTimeout(resolve, 2000));
     
     const stakeAmount = 5000; // Example stake for a 0.05 USDT payment
     
+    const newTransaction: Transaction = {
+      id: `tx_${Date.now()}`,
+      type: 'stake',
+      amount: stakeAmount,
+      date: new Date().toISOString(),
+      description: `Stake confirmed with Order ID: ${orderId}`,
+    };
+
     const updatedUser = {
       ...user,
       stakedBalance: user.stakedBalance + stakeAmount,
+      transactions: [newTransaction, ...(user.transactions || [])],
     };
     updateUserInStateAndStorage(updatedUser);
     return true;
@@ -86,17 +111,40 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   
   const withdrawTokens = (amount: number): boolean => {
     if (!user || user.tokenBalance < amount) return false;
-    const updatedUser = { ...user, tokenBalance: user.tokenBalance - amount };
+    
+    const newTransaction: Transaction = {
+      id: `tx_${Date.now()}`,
+      type: 'withdraw',
+      amount: amount,
+      date: new Date().toISOString(),
+      description: 'Test withdrawal',
+    };
+
+    const updatedUser = { 
+      ...user, 
+      tokenBalance: user.tokenBalance - amount,
+      transactions: [newTransaction, ...(user.transactions || [])],
+    };
     updateUserInStateAndStorage(updatedUser);
     return true;
   };
 
   const claimTaskReward = (taskId: string, reward: number) => {
     if (!user || user.tasksCompleted[taskId]) return;
+    
+    const newTransaction: Transaction = {
+      id: `tx_${Date.now()}`,
+      type: 'task',
+      amount: reward,
+      date: new Date().toISOString(),
+      description: `Reward for task: ${taskId.replace(/_/g, ' ')}`,
+    };
+
     const updatedUser = {
       ...user,
       tokenBalance: user.tokenBalance + reward,
       tasksCompleted: { ...user.tasksCompleted, [taskId]: true },
+      transactions: [newTransaction, ...(user.transactions || [])],
     };
     updateUserInStateAndStorage(updatedUser);
   };
