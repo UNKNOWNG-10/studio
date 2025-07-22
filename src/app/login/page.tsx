@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Coins } from 'lucide-react';
+import Image from 'next/image';
 
 export default function LoginPage() {
   const [uid, setUid] = useState('');
@@ -35,8 +36,15 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <Card className="w-full max-w-sm shadow-2xl">
         <CardHeader className="text-center">
-          <div className="mx-auto bg-primary text-primary-foreground rounded-full h-16 w-16 flex items-center justify-center mb-4">
-             <Coins className="h-8 w-8" />
+          <div className="mx-auto rounded-full h-24 w-24 flex items-center justify-center mb-4 overflow-hidden">
+             <Image 
+                src="https://placehold.co/256x256.png"
+                width={100}
+                height={100}
+                alt="Pika Token"
+                className="object-cover"
+                data-ai-hint="cute creature"
+             />
           </div>
           <CardTitle className="text-3xl font-headline">Pika Token</CardTitle>
           <CardDescription>Sign in with your Binance UID to start earning.</CardDescription>
