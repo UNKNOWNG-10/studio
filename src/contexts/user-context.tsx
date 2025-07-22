@@ -10,8 +10,16 @@ export type Transaction = {
   description: string;
 };
 
+export type Task = {
+  id: string;
+  title: string;
+  reward: number;
+  icon?: string; // Keeping this simple for now
+};
+
 interface User {
   uid: string;
+  isAdmin: boolean;
   tokenBalance: number;
   stakedBalance: number;
   tasksCompleted: { [key: string]: boolean };
@@ -21,18 +29,31 @@ interface User {
 interface UserContextType {
   user: User | null;
   loading: boolean;
+  isAdmin: boolean;
+  tasks: Task[];
   login: (uid: string) => void;
   logout: () => void;
   updateTokenBalance: (amount: number) => void;
   stakeTokens: (orderId: string) => Promise<boolean>;
   withdrawTokens: (amount: number) => boolean;
   claimTaskReward: (taskId: string, reward: number) => void;
+  addTask: (task: Omit<Task, 'id'>) => void;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
+const initialTasks: Task[] = [
+  { id: 'follow_twitter', title: 'Follow us on X (Twitter)', reward: 500, icon: 'Twitter' },
+  { id: 'join_telegram', title: 'Join our Telegram Channel', reward: 500, icon: 'Send' },
+  { id: 'first_stake', title: 'Make your first stake', reward: 1000, icon: 'Gift' },
+  { id: 'watch_ad', title: 'Watch an Ad', reward: 100, icon: 'Tv' },
+];
+
+const ADMIN_UID = "admin_user_123";
+
 export const UserProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -41,15 +62,24 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       if (storedUser) {
         setUser(JSON.parse(storedUser));
       }
+      const storedTasks = localStorage.getItem('pikaTokenTasks');
+      if (storedTasks) {
+        setTasks(JSON.parse(storedTasks));
+      } else {
+        setTasks(initialTasks);
+        localStorage.setItem('pikaTokenTasks', JSON.stringify(initialTasks));
+      }
     } catch (error) {
-      console.error("Failed to parse user from localStorage", error);
+      console.error("Failed to parse from localStorage", error);
       localStorage.removeItem('pikaTokenUser');
+      localStorage.removeItem('pikaTokenTasks');
     } finally {
       setLoading(false);
     }
   }, []);
 
   const login = (uid: string) => {
+    const isAdmin = uid === ADMIN_UID;
     const newTransaction: Transaction = {
       id: `tx_${Date.now()}`,
       type: 'login_bonus',
@@ -59,6 +89,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     };
     const newUser: User = {
       uid,
+      isAdmin,
       tokenBalance: 1000,
       stakedBalance: 0,
       tasksCompleted: {},
@@ -72,11 +103,16 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     localStorage.removeItem('pikaTokenUser');
     setUser(null);
   };
-
+  
   const updateUserInStateAndStorage = (updatedUser: User) => {
     setUser(updatedUser);
     localStorage.setItem('pikaTokenUser', JSON.stringify(updatedUser));
   };
+  
+  const updateTasksInStateAndStorage = (updatedTasks: Task[]) => {
+    setTasks(updatedTasks);
+    localStorage.setItem('pikaTokenTasks', JSON.stringify(updatedTasks));
+  }
 
   const updateTokenBalance = (amount: number) => {
     if (!user) return;
@@ -87,10 +123,9 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   const stakeTokens = async (orderId: string): Promise<boolean> => {
     if (!user) return false;
     
-    // Simulate API call for approval
     await new Promise(resolve => setTimeout(resolve, 2000));
     
-    const stakeAmount = 5000; // Example stake for a 0.05 USDT payment
+    const stakeAmount = 5000;
     
     const newTransaction: Transaction = {
       id: `tx_${Date.now()}`,
@@ -132,12 +167,15 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   const claimTaskReward = (taskId: string, reward: number) => {
     if (!user || user.tasksCompleted[taskId]) return;
     
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+
     const newTransaction: Transaction = {
       id: `tx_${Date.now()}`,
       type: 'task',
       amount: reward,
       date: new Date().toISOString(),
-      description: `Reward for task: ${taskId.replace(/_/g, ' ')}`,
+      description: `Reward for task: ${task.title}`,
     };
 
     const updatedUser = {
@@ -149,8 +187,20 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     updateUserInStateAndStorage(updatedUser);
   };
 
+  const addTask = (task: Omit<Task, 'id'>) => {
+    if(!user || !user.isAdmin) return;
+
+    const newTask: Task = {
+      ...task,
+      id: `task_${Date.now()}`
+    };
+
+    const updatedTasks = [...tasks, newTask];
+    updateTasksInStateAndStorage(updatedTasks);
+  };
+
   return (
-    <UserContext.Provider value={{ user, loading, login, logout, updateTokenBalance, stakeTokens, withdrawTokens, claimTaskReward }}>
+    <UserContext.Provider value={{ user, loading, isAdmin: user?.isAdmin || false, tasks, login, logout, updateTokenBalance, stakeTokens, withdrawTokens, claimTaskReward, addTask }}>
       {children}
     </UserContext.Provider>
   );
