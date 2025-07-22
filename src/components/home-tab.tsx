@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Clock } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
@@ -16,28 +16,36 @@ import Image from 'next/image';
 
 export default function HomeTab() {
   const { user, stakeTokens, withdrawTokens } = useUser();
-  const [currentStaked, setCurrentStaked] = useState(user?.stakedBalance || 0);
   
   const [stakeOrderId, setStakeOrderId] = useState('');
   const [isStaking, setIsStaking] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [isStakeDialogOpen, setStakeDialogOpen] = useState(false);
   const [isWithdrawDialogOpen, setWithdrawDialogOpen] = useState(false);
+  const [nextPayoutTime, setNextPayoutTime] = useState('');
 
   useEffect(() => {
     if (user && user.stakedBalance > 0) {
-      const interval = setInterval(() => {
-        setCurrentStaked(prev => prev + (user.stakedBalance * 0.03) / (24 * 60 * 60)); // 3% daily yield per second
+      const payoutInterval = setInterval(() => {
+        const lastPayout = new Date(user.lastPayoutTime || Date.now());
+        const nextPayout = new Date(lastPayout.getTime() + 60 * 60 * 1000);
+        const now = new Date();
+        const diff = nextPayout.getTime() - now.getTime();
+
+        if (diff <= 0) {
+          setNextPayoutTime('Claiming now...');
+          return;
+        }
+
+        const minutes = Math.floor((diff / 1000 / 60) % 60);
+        const seconds = Math.floor((diff / 1000) % 60);
+
+        setNextPayoutTime(`${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
       }, 1000);
-      return () => clearInterval(interval);
+
+      return () => clearInterval(payoutInterval);
     }
   }, [user]);
-  
-  useEffect(() => {
-    if(user) {
-        setCurrentStaked(user.stakedBalance);
-    }
-  }, [user?.stakedBalance])
 
   const handleStake = async () => {
     if (!stakeOrderId) {
@@ -76,7 +84,7 @@ export default function HomeTab() {
     }
   };
 
-  const dailyEarning = (user?.stakedBalance || 0) * 0.03;
+  const hourlyEarning = (user?.stakedBalance || 0) * (0.03 / 24) * 45; // Based on 130% daily return from user's number
   const tokenToUsdtRate = 0.001;
 
   return (
@@ -93,7 +101,7 @@ export default function HomeTab() {
         <Card className="shadow-lg bg-card/80 backdrop-blur-sm">
           <CardHeader>
             <CardTitle className="text-2xl font-headline">Staking Dashboard</CardTitle>
-            <CardDescription>Stake your Pika Tokens to earn daily rewards.</CardDescription>
+            <CardDescription>Stake your Pika Tokens to earn hourly rewards.</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col items-center gap-6">
             <div className="relative w-48 h-48 sm:w-64 sm:h-64 flex items-center justify-center">
@@ -115,13 +123,19 @@ export default function HomeTab() {
               <div className="text-center">
                 <p className="text-sm text-muted-foreground">Staked Balance</p>
                 <p className="text-3xl sm:text-4xl font-bold text-primary">
-                  {Math.floor(currentStaked).toLocaleString()}
+                  {(user?.stakedBalance || 0).toLocaleString()}
                 </p>
                 <p className="text-xs text-green-500 font-semibold">
-                  Daily Earning: {dailyEarning.toLocaleString(undefined, { maximumFractionDigits: 2 })} (3%)
+                  Hourly Earning: {hourlyEarning.toLocaleString(undefined, { maximumFractionDigits: 2 })}
                 </p>
               </div>
             </div>
+             {user?.stakedBalance && user.stakedBalance > 0 && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Clock className="h-4 w-4 animate-spin" />
+                <span>Next payout in: {nextPayoutTime}</span>
+              </div>
+            )}
           </CardContent>
           <CardFooter className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Dialog open={isStakeDialogOpen} onOpenChange={setStakeDialogOpen}>
@@ -205,14 +219,14 @@ export default function HomeTab() {
                       <Badge variant={
                         tx.type === 'stake' ? 'default' : 
                         tx.type === 'withdraw' ? 'secondary' :
-                        tx.type === 'task' ? 'outline' :
+                        tx.type === 'task' || tx.type === 'earning' ? 'outline' :
                         'default'
                       } className="capitalize">{tx.type.replace('_', ' ')}</Badge>
                     </TableCell>
                     <TableCell className="text-muted-foreground">{tx.description}</TableCell>
                     <TableCell className={`text-right font-semibold ${tx.type === 'withdraw' ? 'text-destructive' : 'text-green-600'}`}>
                       {tx.type === 'withdraw' ? '-' : '+'}
-                      {tx.amount.toLocaleString()}
+                      {tx.amount.toLocaleString(undefined, { maximumFractionDigits: 2 })}
                     </TableCell>
                     <TableCell className="text-right text-muted-foreground">{format(new Date(tx.date), "MMM d, yyyy")}</TableCell>
                   </TableRow>

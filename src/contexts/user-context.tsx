@@ -4,7 +4,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 
 export type Transaction = {
   id: string;
-  type: 'stake' | 'withdraw' | 'task' | 'login_bonus';
+  type: 'stake' | 'withdraw' | 'task' | 'login_bonus' | 'earning';
   amount: number;
   date: string;
   description: string;
@@ -25,6 +25,7 @@ interface User {
   hasStaked: boolean; // To track if user has staked once
   tasksCompleted: { [key: string]: boolean };
   transactions: Transaction[];
+  lastPayoutTime?: string;
 }
 
 interface UserContextType {
@@ -51,6 +52,7 @@ const initialTasks: Task[] = [
 ];
 
 const ADMIN_UID = "admin_user_123";
+const HOURLY_EARNING_RATE_FACTOR = (0.03 / 24) * 45; // ~54.16 tokens per hour for 1000 staked
 
 export const UserProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -79,6 +81,40 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
+  useEffect(() => {
+    const payoutInterval = setInterval(() => {
+      if (user && user.stakedBalance > 0) {
+        const lastPayout = new Date(user.lastPayoutTime || Date.now());
+        const now = new Date();
+        const hoursDiff = (now.getTime() - lastPayout.getTime()) / (1000 * 60 * 60);
+
+        if (hoursDiff >= 1) {
+          const hoursToPay = Math.floor(hoursDiff);
+          const earnings = user.stakedBalance * HOURLY_EARNING_RATE_FACTOR * hoursToPay;
+          
+          const newTransaction: Transaction = {
+            id: `tx_earn_${Date.now()}`,
+            type: 'earning',
+            amount: earnings,
+            date: now.toISOString(),
+            description: `Hourly staking reward for ${hoursToPay} hour(s)`,
+          };
+          
+          const updatedUser: User = {
+            ...user,
+            tokenBalance: user.tokenBalance + earnings,
+            lastPayoutTime: now.toISOString(),
+            transactions: [newTransaction, ...(user.transactions || [])],
+          };
+          updateUserInStateAndStorage(updatedUser);
+        }
+      }
+    }, 60 * 1000); // Check every minute
+
+    return () => clearInterval(payoutInterval);
+  }, [user]);
+
+
   const login = (uid: string) => {
     const isAdmin = uid === ADMIN_UID;
     const newTransaction: Transaction = {
@@ -96,6 +132,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       hasStaked: false,
       tasksCompleted: {},
       transactions: [newTransaction],
+      lastPayoutTime: new Date().toISOString(),
     };
     localStorage.setItem('pikaTokenUser', JSON.stringify(newUser));
     setUser(newUser);
@@ -144,6 +181,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       tokenBalance: user.tokenBalance - stakeAmount,
       stakedBalance: user.stakedBalance + stakeAmount,
       hasStaked: true,
+      lastPayoutTime: new Date().toISOString(),
       transactions: [newTransaction, ...(user.transactions || [])],
     };
     updateUserInStateAndStorage(updatedUser);
