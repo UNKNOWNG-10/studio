@@ -54,10 +54,10 @@ const TaskCard = ({ task }: { task: Task }) => {
 
   const isOneTimeTask = ONE_TIME_TASKS.includes(task.id);
   
-  const cooldown = task.id === 'watch_ad' ? 5 * 1000 : 60 * 1000;
+  const cooldown = 60 * 1000;
 
   useEffect(() => {
-    if (isOneTimeTask || !lastCompleted) {
+    if (isOneTimeTask || !lastCompleted || task.requiresApproval) {
       setTimeLeft(0);
       return;
     }
@@ -70,7 +70,7 @@ const TaskCard = ({ task }: { task: Task }) => {
     }, 1000);
 
     return () => clearInterval(intervalId);
-  }, [lastCompleted, cooldown, task.id, isOneTimeTask]);
+  }, [lastCompleted, cooldown, task.id, isOneTimeTask, task.requiresApproval]);
   
   const handleClaim = async () => {
     setIsClaiming(true);
@@ -85,6 +85,8 @@ const TaskCard = ({ task }: { task: Task }) => {
         description = "This task can only be completed once.";
       } else if (task.id === 'first_stake' && user?.stakedBalance === 0) {
         description = "You must stake first to claim this reward.";
+      } else if (task.requiresApproval) {
+        description = "This task requires admin approval and can only be done once."
       }
       toast({ title: "Cannot Claim Task", description, variant: "destructive" });
     }
@@ -124,7 +126,7 @@ const TaskCard = ({ task }: { task: Task }) => {
   }
   
   const isCompletedOnce = !!lastCompleted;
-  let isButtonDisabled = isClaiming || (isOneTimeTask && isCompletedOnce) || timeLeft > 0;
+  let isButtonDisabled = isClaiming || (isOneTimeTask && isCompletedOnce) || timeLeft > 0 || (task.requiresApproval && isCompletedOnce);
   let buttonText = 'Claim Reward';
   
   if (pendingTransaction) {
@@ -132,7 +134,7 @@ const TaskCard = ({ task }: { task: Task }) => {
     isButtonDisabled = true;
   } else if (task.requiresApproval) {
     buttonText = 'Submit for Approval';
-    isButtonDisabled = isClaiming || (isOneTimeTask && isCompletedOnce);
+    isButtonDisabled = isClaiming || isCompletedOnce;
   } else if (task.url && !hasVisitedLink && !isCompletedOnce) {
     buttonText = 'Go to Link';
     isButtonDisabled = false;
@@ -142,14 +144,12 @@ const TaskCard = ({ task }: { task: Task }) => {
   }
   else if (isClaiming) {
     buttonText = ''; // Loader will be shown
-  } else if (isOneTimeTask) {
+  } else if (isOneTimeTask || task.requiresApproval) {
     if (isCompletedOnce) {
       buttonText = 'Completed';
     }
   } else if (timeLeft > 0) {
     buttonText = `Next in ${formatTime(timeLeft)}`;
-  } else if (task.id === 'watch_ad') {
-    buttonText = isCompletedOnce ? "Watch Next Ad" : "Watch Ad";
   } else {
     buttonText = isCompletedOnce ? 'Claim Again' : 'Claim Reward';
   }
@@ -173,7 +173,7 @@ const TaskCard = ({ task }: { task: Task }) => {
               disabled={isButtonDisabled}
             >
               {isClaiming && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isOneTimeTask && isCompletedOnce && !pendingTransaction && <Check className="mr-2 h-4 w-4" />}
+              {isCompletedOnce && !pendingTransaction && (isOneTimeTask || task.requiresApproval) && <Check className="mr-2 h-4 w-4" />}
               {buttonText}
             </Button>
            ) : (
@@ -198,22 +198,22 @@ const TaskCard = ({ task }: { task: Task }) => {
         <DialogHeader>
             <DialogTitle>Submit Task: {task.title}</DialogTitle>
             <DialogDescription>
-            Provide the required information for admin approval. For example, a link to your tweet.
+            Provide the required information for admin approval. For example, a link to your tweet or a screenshot of the completed action.
             </DialogDescription>
         </DialogHeader>
         <div className="py-4 space-y-4">
             <div>
-            <Label htmlFor="submissionData">Submission Data</Label>
+            <Label htmlFor="submissionData">Submission Data (optional)</Label>
             <Textarea 
                 id="submissionData" 
                 value={submission} 
                 onChange={(e) => setSubmission(e.target.value)} 
-                placeholder="e.g., https://x.com/username/status/12345"
+                placeholder="e.g., https://x.com/username/status/12345 or 'Watched the ad'"
             />
             </div>
         </div>
         <DialogFooter>
-            <Button onClick={handleSubmitForApproval} disabled={isClaiming || !submission}>
+            <Button onClick={handleSubmitForApproval} disabled={isClaiming}>
                 {isClaiming && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Submit
             </Button>

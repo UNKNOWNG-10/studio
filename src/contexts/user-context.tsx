@@ -71,7 +71,7 @@ const initialTasks: Task[] = [
   { id: 'follow_twitter', title: 'Follow us on X (Twitter)', reward: 500, icon: 'Twitter', url: 'https://x.com/Pika_Token_io' },
   { id: 'join_telegram', title: 'Join our Telegram Channel', reward: 500, icon: 'Send' },
   { id: 'first_stake', title: 'Make your first stake', reward: 1000, icon: 'Gift' },
-  { id: 'watch_ad', title: 'Watch an Ad', reward: 100, icon: 'Tv' },
+  { id: 'watch_ad', title: 'Watch an Ad', reward: 100, icon: 'Tv', requiresApproval: true },
   { id: 'submit_tweet', title: 'Tweet about Pika Token', reward: 1500, icon: 'Twitter', requiresApproval: true },
 ];
 
@@ -394,11 +394,11 @@ const UserProviderContent = ({ children }: { children: ReactNode }) => {
     const lastCompleted = user.tasksCompleted[taskId];
     const now = new Date();
 
-    if (ONE_TIME_TASKS.includes(taskId)) {
+    if (ONE_TIME_TASKS.includes(taskId) || task.requiresApproval) {
       if (lastCompleted) return false; 
       if (taskId === 'first_stake' && user.stakedBalance <= 0) return false; 
     } else {
-       const cooldown = taskId === 'watch_ad' ? 5 * 1000 : 60 * 1000;
+       const cooldown = 60 * 1000;
        if (lastCompleted && now.getTime() - new Date(lastCompleted).getTime() < cooldown) {
          return false;
        }
