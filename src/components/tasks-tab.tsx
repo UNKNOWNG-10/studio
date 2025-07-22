@@ -2,10 +2,10 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useUser } from '@/contexts/user-context';
+import { useUser, Task } from '@/contexts/user-context';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Check, Gift, Twitter, Send, Tv, PlusCircle, Tag, Trophy, Loader2 } from 'lucide-react';
+import { Check, Gift, Twitter, Send, Tv, PlusCircle, Tag, Trophy, Loader2, ExternalLink } from 'lucide-react';
 import Image from 'next/image';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -30,10 +30,11 @@ const getIcon = (iconName?: string) => {
 
 const ONE_TIME_TASKS = ['follow_twitter', 'join_telegram', 'first_stake'];
 
-const TaskCard = ({ task }: { task: {id: string, title: string, reward: number, icon?:string} }) => {
+const TaskCard = ({ task }: { task: Task }) => {
   const { user, claimTaskReward } = useUser();
   const [timeLeft, setTimeLeft] = useState(0);
   const [isClaiming, setIsClaiming] = useState(false);
+  const [hasVisitedLink, setHasVisitedLink] = useState(false);
 
   const lastCompleted = user?.tasksCompleted[task.id];
   const isOneTimeTask = ONE_TIME_TASKS.includes(task.id);
@@ -73,6 +74,15 @@ const TaskCard = ({ task }: { task: {id: string, title: string, reward: number, 
     setIsClaiming(false);
   }
 
+  const handleAction = () => {
+    if (task.url) {
+      window.open(task.url, '_blank');
+      setHasVisitedLink(true);
+    } else {
+      handleClaim();
+    }
+  }
+
   const formatTime = (ms: number) => {
     const seconds = Math.floor((ms / 1000) % 60);
     const minutes = Math.floor((ms / 1000 / 60) % 60);
@@ -81,16 +91,21 @@ const TaskCard = ({ task }: { task: {id: string, title: string, reward: number, 
   }
   
   const isCompletedOnce = !!lastCompleted;
-  const isButtonDisabled = isClaiming || (isOneTimeTask && isCompletedOnce) || timeLeft > 0;
-  
+  let isButtonDisabled = isClaiming || (isOneTimeTask && isCompletedOnce) || timeLeft > 0;
   let buttonText = 'Claim Reward';
-  if (isClaiming) {
+  
+  if (task.url && !hasVisitedLink && !isCompletedOnce) {
+    buttonText = 'Go to Link';
+    isButtonDisabled = false;
+  } else if(task.url && hasVisitedLink && !isCompletedOnce) {
+    buttonText = 'Claim Reward';
+    isButtonDisabled = isClaiming;
+  }
+  else if (isClaiming) {
     buttonText = ''; // Loader will be shown
   } else if (isOneTimeTask) {
     if (isCompletedOnce) {
       buttonText = 'Completed';
-    } else {
-      buttonText = 'Claim Reward';
     }
   } else if (timeLeft > 0) {
     buttonText = `Next in ${formatTime(timeLeft)}`;
@@ -111,15 +126,24 @@ const TaskCard = ({ task }: { task: {id: string, title: string, reward: number, 
         </div>
       </CardHeader>
       <CardFooter>
-        <Button
-          className="w-full"
-          onClick={handleClaim}
-          disabled={isButtonDisabled}
-        >
-          {isClaiming && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          {isOneTimeTask && isCompletedOnce && <Check className="mr-2 h-4 w-4" />}
-          {buttonText}
-        </Button>
+        <div className="w-full flex gap-2">
+            <Button
+              className="w-full"
+              onClick={handleAction}
+              disabled={isButtonDisabled && !(task.url && !hasVisitedLink && !isCompletedOnce)}
+            >
+              {isClaiming && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isOneTimeTask && isCompletedOnce && <Check className="mr-2 h-4 w-4" />}
+              {task.url && !hasVisitedLink && !isCompletedOnce ? <ExternalLink className="mr-2 h-4 w-4" /> : null}
+              {buttonText}
+            </Button>
+            {task.url && hasVisitedLink && !isCompletedOnce && (
+                 <Button className="w-full" onClick={handleClaim} disabled={isClaiming || isCompletedOnce}>
+                    {isClaiming && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Claim Reward
+                 </Button>
+            )}
+        </div>
       </CardFooter>
     </Card>
   );

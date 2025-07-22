@@ -16,7 +16,8 @@ export type Task = {
   id: string;
   title: string;
   reward: number;
-  icon?: string; // Keeping this simple for now
+  icon?: string;
+  url?: string;
 };
 
 interface User {
@@ -41,7 +42,7 @@ interface UserContextType {
   stakeTokens: (orderId: string) => Promise<boolean>;
   withdrawTokens: (amount: number) => boolean;
   claimTaskReward: (taskId: string, reward: number) => Promise<boolean>;
-  addTask: (task: Omit<Task, 'id'>) => void;
+  addTask: (task: Omit<Task, 'id' | 'url'>) => void;
   approveTransaction: (transactionId: string) => void;
   rejectTransaction: (transactionId: string) => void;
 }
@@ -49,7 +50,7 @@ interface UserContextType {
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
 const initialTasks: Task[] = [
-  { id: 'follow_twitter', title: 'Follow us on X (Twitter)', reward: 500, icon: 'Twitter' },
+  { id: 'follow_twitter', title: 'Follow us on X (Twitter)', reward: 500, icon: 'Twitter', url: 'https://x.com/Pika_Token_io' },
   { id: 'join_telegram', title: 'Join our Telegram Channel', reward: 500, icon: 'Send' },
   { id: 'first_stake', title: 'Make your first stake', reward: 1000, icon: 'Gift' },
   { id: 'watch_ad', title: 'Watch an Ad', reward: 100, icon: 'Tv' },
@@ -300,7 +301,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     return true;
   };
 
-  const addTask = (task: Omit<Task, 'id'>) => {
+  const addTask = (task: Omit<Task, 'id' | 'url'>) => {
     if(!user || !user.isAdmin) return;
 
     const newTask: Task = {
