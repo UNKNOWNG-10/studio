@@ -4,13 +4,14 @@ import React from 'react';
 import { useUser } from '@/contexts/user-context';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Check, Gift, Twitter, Send } from 'lucide-react';
+import { Check, Gift, Twitter, Send, Tv } from 'lucide-react';
 import Image from 'next/image';
 
 const tasks = [
   { id: 'follow_twitter', title: 'Follow us on X (Twitter)', reward: 500, icon: <Twitter className="h-6 w-6 text-sky-500" /> },
   { id: 'join_telegram', title: 'Join our Telegram Channel', reward: 500, icon: <Send className="h-6 w-6 text-blue-500" /> },
   { id: 'first_stake', title: 'Make your first stake', reward: 1000, icon: <Gift className="h-6 w-6 text-primary" /> },
+  { id: 'watch_ad', title: 'Watch an Ad', reward: 100, icon: <Tv className="h-6 w-6 text-green-500" /> },
 ];
 
 export default function TasksTab() {
