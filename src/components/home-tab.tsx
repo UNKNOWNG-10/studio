@@ -85,7 +85,7 @@ export default function HomeTab() {
   };
 
   const hourlyEarning = (user?.stakedBalance || 0) * (0.03 / 24) * 45; // Based on 130% daily return from user's number
-  const tokenToUsdtRate = 0.001;
+  const tokenToUsdtRate = 0.0001;
 
   return (
     <div className="relative w-full max-w-3xl mx-auto mt-6 space-y-8">
@@ -179,15 +179,15 @@ export default function HomeTab() {
                 <DialogHeader>
                   <DialogTitle>Test Withdraw</DialogTitle>
                   <DialogDescription>
-                    Convert your Pika Tokens to USDT. Rate: 1000 Pika Tokens = 1 USDT.
+                    Convert your Pika Tokens to USDT. Rate: 10,000 Pika Tokens = 1 USDT.
                   </DialogDescription>
                 </DialogHeader>
                 <div className="py-4 space-y-4">
                     <div>
                         <Label htmlFor="withdrawAmount">Pika Token Amount to Withdraw</Label>
-                        <Input id="withdrawAmount" type="number" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} placeholder="e.g., 1000" />
+                        <Input id="withdrawAmount" type="number" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} placeholder="e.g., 10000" />
                     </div>
-                    {withdrawAmount && <p className="font-semibold text-center text-lg">You will receive: <span className="text-primary">{(parseFloat(withdrawAmount) * tokenToUsdtRate).toFixed(2)} USDT</span></p>}
+                    {withdrawAmount && <p className="font-semibold text-center text-lg">You will receive: <span className="text-primary">{(parseFloat(withdrawAmount) * tokenToUsdtRate).toFixed(4)} USDT</span></p>}
                 </div>
                 <DialogFooter>
                     <Button onClick={handleWithdraw}>Confirm Withdraw</Button>
