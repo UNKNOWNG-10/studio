@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -15,7 +16,7 @@ import { format } from 'date-fns';
 import Image from 'next/image';
 
 export default function HomeTab() {
-  const { user, stakeTokens, withdrawTokens, approveTransaction, rejectTransaction, isAdmin } = useUser();
+  const { user, stakeTokens, withdrawTokens, approveTransaction, rejectTransaction, isAdmin, getAllTransactions } = useUser();
   
   const [stakeOrderId, setStakeOrderId] = useState('');
   const [isStaking, setIsStaking] = useState(false);
@@ -23,6 +24,8 @@ export default function HomeTab() {
   const [isStakeDialogOpen, setStakeDialogOpen] = useState(false);
   const [isWithdrawDialogOpen, setWithdrawDialogOpen] = useState(false);
   const [nextPayoutTime, setNextPayoutTime] = useState('');
+  
+  const allTransactions = isAdmin ? getAllTransactions() : user?.transactions || [];
 
   useEffect(() => {
     if (user && user.stakedBalance > 0) {
@@ -92,13 +95,13 @@ export default function HomeTab() {
     }
   };
   
-  const handleApprove = (txId: string) => {
-    approveTransaction(txId);
+  const handleApprove = (txId: string, uid: string) => {
+    approveTransaction(txId, uid);
     toast({ title: 'Success', description: 'Transaction approved.'});
   }
 
-  const handleReject = (txId: string) => {
-    rejectTransaction(txId);
+  const handleReject = (txId: string, uid: string) => {
+    rejectTransaction(txId, uid);
     toast({ title: 'Success', description: 'Transaction rejected. Tokens have been returned to the user.'});
   }
 
@@ -205,7 +208,7 @@ export default function HomeTab() {
                         <Label htmlFor="withdrawAmount">Pika Token Amount to Withdraw</Label>
                         <Input id="withdrawAmount" type="number" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} placeholder="e.g., 100000" />
                     </div>
-                    {withdrawAmount && <p className="font-semibold text-center text-lg">You will receive: <span className="text-primary">{(parseFloat(withdrawAmount) * tokenToUsdtRate).toFixed(4)} USDT</span></p>}
+                    {withdrawAmount && <p className="font-semibold text-center text-lg">You will receive: <span className="text-primary">{(parseFloat(withdrawAmount || '0') * tokenToUsdtRate).toFixed(4)} USDT</span></p>}
                 </div>
                 <DialogFooter>
                     <Button onClick={handleWithdraw}>Request Withdraw</Button>
@@ -218,12 +221,13 @@ export default function HomeTab() {
         <Card className="shadow-lg bg-card/80 backdrop-blur-sm">
           <CardHeader>
             <CardTitle>Transaction History</CardTitle>
-            <CardDescription>A record of your recent staking and withdrawal activities.</CardDescription>
+            <CardDescription>{isAdmin ? 'All user transactions' : 'A record of your recent staking and withdrawal activities.'}</CardDescription>
           </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
                 <TableRow>
+                  {isAdmin && <TableHead>User ID</TableHead>}
                   <TableHead>Type</TableHead>
                   <TableHead>Description</TableHead>
                   <TableHead>Status</TableHead>
@@ -233,13 +237,14 @@ export default function HomeTab() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {user?.transactions?.length ? user.transactions.slice(0, 10).map((tx) => (
+                {allTransactions?.length ? allTransactions.slice(0, 20).map((tx: any) => (
                   <TableRow key={tx.id}>
+                    {isAdmin && <TableCell className="font-mono text-xs">{tx.uid}</TableCell>}
                     <TableCell>
                       <Badge variant={
                         tx.type === 'stake' ? 'default' : 
                         tx.type === 'withdraw' ? 'secondary' :
-                        tx.type === 'task' || tx.type === 'earning' ? 'outline' :
+                        tx.type === 'task' || tx.type === 'earning' || tx.type === 'referral_bonus' || tx.type === 'login_bonus' ? 'outline' :
                         'default'
                       } className="capitalize">{tx.type.replace('_', ' ')}</Badge>
                     </TableCell>
@@ -260,10 +265,10 @@ export default function HomeTab() {
                         <TableCell className="text-right">
                             {tx.status === 'pending' && (
                                 <div className="flex gap-2 justify-end">
-                                    <Button size="sm" onClick={() => handleApprove(tx.id)} variant="outline">
+                                    <Button size="sm" onClick={() => handleApprove(tx.id, tx.uid)} variant="outline">
                                         <CheckCircle2 className="mr-2 h-4 w-4" /> Approve
                                     </Button>
-                                    <Button size="sm" onClick={() => handleReject(tx.id)} variant="destructive">
+                                    <Button size="sm" onClick={() => handleReject(tx.id, tx.uid)} variant="destructive">
                                         <XCircle className="mr-2 h-4 w-4" /> Reject
                                     </Button>
                                 </div>
@@ -273,7 +278,7 @@ export default function HomeTab() {
                   </TableRow>
                 )) : (
                   <TableRow>
-                    <TableCell colSpan={isAdmin ? 6: 5} className="text-center">No transactions yet.</TableCell>
+                    <TableCell colSpan={isAdmin ? 7: 5} className="text-center">No transactions yet.</TableCell>
                   </TableRow>
                 )}
               </TableBody>
@@ -284,5 +289,3 @@ export default function HomeTab() {
     </div>
   );
 }
-
-    

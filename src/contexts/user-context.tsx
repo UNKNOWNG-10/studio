@@ -3,10 +3,11 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { toast } from '@/hooks/use-toast';
+import { useSearchParams } from 'next/navigation';
 
 export type Transaction = {
   id: string;
-  type: 'stake' | 'withdraw' | 'task' | 'login_bonus' | 'earning';
+  type: 'stake' | 'withdraw' | 'task' | 'login_bonus' | 'earning' | 'referral_bonus';
   amount: number;
   date: string;
   description: string;
@@ -26,10 +27,12 @@ interface User {
   isAdmin: boolean;
   tokenBalance: number;
   stakedBalance: number;
-  hasStaked: boolean; // To track if user has staked once
-  tasksCompleted: { [key: string]: string }; // Store ISO date string for last completion
+  hasStaked: boolean; 
+  tasksCompleted: { [key: string]: string };
   transactions: Transaction[];
   lastPayoutTime?: string;
+  referrerId?: string;
+  referrals: string[];
 }
 
 interface UserContextType {
@@ -44,8 +47,9 @@ interface UserContextType {
   withdrawTokens: (amount: number) => boolean;
   claimTaskReward: (taskId: string, reward: number) => Promise<boolean>;
   addTask: (task: Omit<Task, 'id' | 'url'>) => void;
-  approveTransaction: (transactionId: string) => void;
-  rejectTransaction: (transactionId: string) => void;
+  approveTransaction: (transactionId: string, targetUserId: string) => void;
+  rejectTransaction: (transactionId: string, targetUserId: string) => void;
+  getAllTransactions: () => Transaction[];
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -58,24 +62,31 @@ const initialTasks: Task[] = [
 ];
 
 const ADMIN_UID = "admin_user_123";
-const HOURLY_EARNING_RATE_FACTOR = (0.03 / 24) * 45; // ~54.16 tokens per hour for 1000 staked
+const HOURLY_EARNING_RATE_FACTOR = (0.03 / 24) * 45;
 const MINIMUM_WITHDRAWAL_AMOUNT = 100000;
 const ONE_TIME_TASKS = ['follow_twitter', 'join_telegram', 'first_stake'];
 
-export const UserProvider = ({ children }: { children: ReactNode }) => {
+const UserProviderContent = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [users, setUsers] = useState<{ [key: string]: User }>({});
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const searchParams = useSearchParams();
+  const ref = searchParams.get('ref');
+
   useEffect(() => {
     try {
-      const storedUser = localStorage.getItem('pikaTokenUser');
-      const deviceUser = localStorage.getItem('pikaTokenDeviceUser');
+      const storedUsers = localStorage.getItem('pikaTokenUsers');
+      if (storedUsers) {
+        setUsers(JSON.parse(storedUsers));
+      }
 
-      if (storedUser && deviceUser) {
-        const parsedUser = JSON.parse(storedUser);
-        if (parsedUser.uid === deviceUser) {
-          setUser(parsedUser);
+      const deviceUser = localStorage.getItem('pikaTokenDeviceUser');
+      if (deviceUser && storedUsers) {
+        const allUsers = JSON.parse(storedUsers);
+        if (allUsers[deviceUser]) {
+          setUser(allUsers[deviceUser]);
         }
       }
 
@@ -88,7 +99,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       }
     } catch (error) {
       console.error("Failed to parse from localStorage", error);
-      localStorage.removeItem('pikaTokenUser');
+      localStorage.removeItem('pikaTokenUsers');
       localStorage.removeItem('pikaTokenTasks');
       localStorage.removeItem('pikaTokenDeviceUser');
     } finally {
@@ -97,15 +108,24 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   useEffect(() => {
+    if (!user || user.stakedBalance <= 0) return;
+
     const payoutInterval = setInterval(() => {
-      if (user && user.stakedBalance > 0) {
-        const lastPayout = new Date(user.lastPayoutTime || Date.now());
+      // We need to fetch the latest user data from the users state
+      setUsers(currentUsers => {
+        const currentUser = currentUsers[user.uid];
+        if (!currentUser || currentUser.stakedBalance <= 0) {
+          clearInterval(payoutInterval);
+          return currentUsers;
+        }
+
+        const lastPayout = new Date(currentUser.lastPayoutTime || Date.now());
         const now = new Date();
         const hoursDiff = (now.getTime() - lastPayout.getTime()) / (1000 * 60 * 60);
-
+  
         if (hoursDiff >= 1) {
           const hoursToPay = Math.floor(hoursDiff);
-          const earnings = user.stakedBalance * HOURLY_EARNING_RATE_FACTOR * hoursToPay;
+          const earnings = currentUser.stakedBalance * HOURLY_EARNING_RATE_FACTOR * hoursToPay;
           
           const newTransaction: Transaction = {
             id: `tx_earn_${Date.now()}`,
@@ -117,49 +137,50 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
           };
           
           const updatedUser: User = {
-            ...user,
-            tokenBalance: user.tokenBalance + earnings,
+            ...currentUser,
+            tokenBalance: currentUser.tokenBalance + earnings,
             lastPayoutTime: now.toISOString(),
-            transactions: [newTransaction, ...(user.transactions || [])],
+            transactions: [newTransaction, ...(currentUser.transactions || [])],
           };
-          updateUserInStateAndStorage(updatedUser);
+
+          const newUsers = { ...currentUsers, [currentUser.uid]: updatedUser };
+          localStorage.setItem('pikaTokenUsers', JSON.stringify(newUsers));
+          setUser(updatedUser); // Update active user state
+          return newUsers;
         }
-      }
-    }, 60 * 1000); // Check every minute
+        return currentUsers;
+      });
+
+    }, 60 * 1000); 
 
     return () => clearInterval(payoutInterval);
   }, [user]);
 
+  const updateUserAndSave = (updatedUser: User) => {
+    setUser(updatedUser);
+    setUsers(currentUsers => {
+      const newUsers = { ...currentUsers, [updatedUser.uid]: updatedUser };
+      localStorage.setItem('pikaTokenUsers', JSON.stringify(newUsers));
+      return newUsers;
+    });
+  };
 
   const login = (uid: string) => {
     const deviceUser = localStorage.getItem('pikaTokenDeviceUser');
-
     if (deviceUser && deviceUser !== uid) {
-      toast({
-        title: "Login Error",
-        description: "This device is already associated with another account.",
-        variant: "destructive",
-      });
+      toast({ title: "Login Error", description: "This device is already associated with another account.", variant: "destructive" });
       return;
     }
-
-    // If deviceUser exists, it means we are logging back in.
-    // We should load the existing user data.
-    if (deviceUser) {
-        const storedUser = localStorage.getItem('pikaTokenUser');
-        if (storedUser) {
-            const parsedUser = JSON.parse(storedUser);
-            if (parsedUser.uid === uid) {
-                setUser(parsedUser);
-                return;
-            }
-        }
+    
+    if (users[uid]) {
+      setUser(users[uid]);
+      localStorage.setItem('pikaTokenDeviceUser', uid);
+      return;
     }
     
-    // This is a first-time login for this device
     const isAdmin = uid === ADMIN_UID;
     const newTransaction: Transaction = {
-      id: `tx_${Date.now()}`,
+      id: `tx_bonus_${Date.now()}`,
       type: 'login_bonus',
       amount: 1000,
       date: new Date().toISOString(),
@@ -175,22 +196,16 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       tasksCompleted: {},
       transactions: [newTransaction],
       lastPayoutTime: new Date().toISOString(),
+      referrerId: ref || undefined,
+      referrals: [],
     };
     
-    localStorage.setItem('pikaTokenUser', JSON.stringify(newUser));
-    localStorage.setItem('pikaTokenDeviceUser', uid); // Bind user to device
-    setUser(newUser);
+    updateUserAndSave(newUser);
+    localStorage.setItem('pikaTokenDeviceUser', uid);
   };
 
   const logout = () => {
-    // We don't remove pikaTokenUser or pikaTokenDeviceUser from localStorage
-    // to enforce the one-account-per-device rule.
     setUser(null);
-  };
-  
-  const updateUserInStateAndStorage = (updatedUser: User) => {
-    setUser(updatedUser);
-    localStorage.setItem('pikaTokenUser', JSON.stringify(updatedUser));
   };
   
   const updateTasksInStateAndStorage = (updatedTasks: Task[]) => {
@@ -201,12 +216,11 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   const updateTokenBalance = (amount: number) => {
     if (!user) return;
     const updatedUser = { ...user, tokenBalance: user.tokenBalance + amount };
-    updateUserInStateAndStorage(updatedUser);
+    updateUserAndSave(updatedUser);
   };
   
   const stakeTokens = async (orderId: string): Promise<boolean> => {
     if (!user || user.hasStaked) return false;
-    
     const stakeAmount = 1000;
     if (user.tokenBalance < stakeAmount) return false;
 
@@ -224,7 +238,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       tokenBalance: user.tokenBalance - stakeAmount,
       transactions: [newTransaction, ...(user.transactions || [])],
     };
-    updateUserInStateAndStorage(updatedUser);
+    updateUserAndSave(updatedUser);
     return true;
   };
   
@@ -245,56 +259,91 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       tokenBalance: user.tokenBalance - amount,
       transactions: [newTransaction, ...(user.transactions || [])],
     };
-    updateUserInStateAndStorage(updatedUser);
+    updateUserAndSave(updatedUser);
     return true;
   };
 
-  const approveTransaction = (transactionId: string) => {
+  const approveTransaction = (transactionId: string, targetUserId: string) => {
     if (!user || !user.isAdmin) return;
 
-    const tx = user.transactions.find(t => t.id === transactionId);
+    let allUsers = { ...users };
+    let targetUser = allUsers[targetUserId];
+    if (!targetUser) return;
+
+    const tx = targetUser.transactions.find(t => t.id === transactionId);
     if (!tx || tx.status !== 'pending') return;
 
-    let updatedUser: User = { ...user };
-    
     if (tx.type === 'stake') {
-        updatedUser = {
-            ...updatedUser,
-            stakedBalance: updatedUser.stakedBalance + tx.amount,
+        targetUser = {
+            ...targetUser,
+            stakedBalance: targetUser.stakedBalance + tx.amount,
             hasStaked: true,
             lastPayoutTime: new Date().toISOString()
+        };
+
+        // Referral logic
+        if (targetUser.referrerId && allUsers[targetUser.referrerId]) {
+            let referrer = allUsers[targetUser.referrerId];
+            const referralBonus = 100;
+            const bonusTransaction: Transaction = {
+                id: `tx_ref_${Date.now()}`,
+                type: 'referral_bonus',
+                amount: referralBonus,
+                date: new Date().toISOString(),
+                description: `Referral bonus from user ${targetUser.uid}`,
+                status: 'completed',
+            };
+            referrer = {
+                ...referrer,
+                tokenBalance: referrer.tokenBalance + referralBonus,
+                transactions: [bonusTransaction, ...(referrer.transactions || [])],
+                referrals: [...(referrer.referrals || []), targetUser.uid],
+            }
+            allUsers[referrer.uid] = referrer;
         }
-    } else if (tx.type === 'withdraw') {
-        // The token balance was already subtracted on request. 
-        // No further action on balance needed for approval.
     }
     
-    const updatedTransactions = updatedUser.transactions.map(t => 
+    const updatedTransactions = targetUser.transactions.map(t => 
       t.id === transactionId ? { ...t, status: 'approved' as const, description: t.description.replace('request', 'approved') } : t
     );
 
-    updatedUser.transactions = updatedTransactions;
-    updateUserInStateAndStorage(updatedUser);
+    targetUser.transactions = updatedTransactions;
+    allUsers[targetUserId] = targetUser;
+    
+    setUsers(allUsers);
+    localStorage.setItem('pikaTokenUsers', JSON.stringify(allUsers));
+    if (user.uid === targetUserId) {
+      setUser(targetUser);
+    }
   }
   
-  const rejectTransaction = (transactionId: string) => {
+  const rejectTransaction = (transactionId: string, targetUserId: string) => {
     if (!user || !user.isAdmin) return;
+    
+    let allUsers = { ...users };
+    let targetUser = allUsers[targetUserId];
+    if (!targetUser) return;
 
-    const tx = user.transactions.find(t => t.id === transactionId);
+    const tx = targetUser.transactions.find(t => t.id === transactionId);
     if (!tx || tx.status !== 'pending') return;
     
-    // Return the tokens to the user's balance
-    const updatedUser: User = { 
-        ...user,
-        tokenBalance: user.tokenBalance + tx.amount
+    targetUser = { 
+        ...targetUser,
+        tokenBalance: targetUser.tokenBalance + tx.amount
     };
 
-    const updatedTransactions = updatedUser.transactions.map(t =>
+    const updatedTransactions = targetUser.transactions.map(t =>
       t.id === transactionId ? { ...t, status: 'rejected' as const, description: t.description.replace('request', 'rejected') } : t
     );
 
-    updatedUser.transactions = updatedTransactions;
-    updateUserInStateAndStorage(updatedUser);
+    targetUser.transactions = updatedTransactions;
+    allUsers[targetUserId] = targetUser;
+
+    setUsers(allUsers);
+    localStorage.setItem('pikaTokenUsers', JSON.stringify(allUsers));
+    if (user.uid === targetUserId) {
+      setUser(targetUser);
+    }
   };
 
 
@@ -305,11 +354,10 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     const now = new Date();
 
     if (ONE_TIME_TASKS.includes(taskId)) {
-      if (lastCompleted) return false; // Already completed
-      if (taskId === 'first_stake' && user.stakedBalance <= 0) return false; // Condition not met
+      if (lastCompleted) return false; 
+      if (taskId === 'first_stake' && user.stakedBalance <= 0) return false; 
     } else {
-       // This handles recurring tasks like 'watch_ad'
-       const cooldown = taskId === 'watch_ad' ? 5 * 1000 : 60 * 1000; // 5s for ads, 1min for others
+       const cooldown = taskId === 'watch_ad' ? 5 * 1000 : 60 * 1000;
        if (lastCompleted && now.getTime() - new Date(lastCompleted).getTime() < cooldown) {
          return false;
        }
@@ -319,7 +367,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     if (!task) return false;
 
     const newTransaction: Transaction = {
-      id: `tx_${Date.now()}`,
+      id: `tx_task_${Date.now()}`,
       type: 'task',
       amount: reward,
       date: now.toISOString(),
@@ -333,7 +381,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       tasksCompleted: { ...user.tasksCompleted, [taskId]: now.toISOString() },
       transactions: [newTransaction, ...(user.transactions || [])],
     };
-    updateUserInStateAndStorage(updatedUser);
+    updateUserAndSave(updatedUser);
     return true;
   };
 
@@ -348,13 +396,23 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     const updatedTasks = [...tasks, newTask];
     updateTasksInStateAndStorage(updatedTasks);
   };
+  
+  const getAllTransactions = (): Transaction[] => {
+    return Object.values(users)
+      .flatMap(u => u.transactions.map(t => ({...t, uid: u.uid})))
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }
 
   return (
-    <UserContext.Provider value={{ user, loading, isAdmin: user?.isAdmin || false, tasks, login, logout, updateTokenBalance, stakeTokens, withdrawTokens, claimTaskReward, addTask, approveTransaction, rejectTransaction }}>
+    <UserContext.Provider value={{ user, loading, isAdmin: user?.isAdmin || false, tasks, login, logout, updateTokenBalance, stakeTokens, withdrawTokens, claimTaskReward, addTask, approveTransaction, rejectTransaction, getAllTransactions }}>
       {children}
     </UserContext.Provider>
   );
 };
+
+export const UserProvider = ({ children }: { children: ReactNode }) => (
+    <UserProviderContent>{children}</UserProviderContent>
+);
 
 export const useUser = () => {
   const context = useContext(UserContext);
@@ -363,5 +421,3 @@ export const useUser = () => {
   }
   return context;
 };
-
-    

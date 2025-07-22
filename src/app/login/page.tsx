@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@/contexts/user-context';
 import { Button } from '@/components/ui/button';
@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Coins } from 'lucide-react';
 import Image from 'next/image';
 
-export default function LoginPage() {
+function LoginPageContent() {
   const [uid, setUid] = useState('');
   const { login, user, loading } = useUser();
   const router = useRouter();
@@ -36,7 +36,6 @@ export default function LoginPage() {
   const handleLogin = () => {
     if (uid.length >= 8) {
       login(uid);
-      // The router.push will be handled by the useEffect above
     }
   };
 
@@ -111,4 +110,10 @@ export default function LoginPage() {
   );
 }
 
-    
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <LoginPageContent />
+    </Suspense>
+  )
+}
