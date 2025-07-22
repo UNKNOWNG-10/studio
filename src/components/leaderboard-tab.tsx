@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useMemo } from 'react';
@@ -14,50 +15,39 @@ interface LeaderboardUser {
 }
 
 export default function LeaderboardTab() {
-  const { user } = useUser();
+  const { user, getAllUsers } = useUser();
+  const allUsers = getAllUsers();
 
   const leaderboardData: LeaderboardUser[] = useMemo(() => {
-    const data: LeaderboardUser[] = [];
-    let currentUserInList = false;
+    if (!allUsers) return [];
 
-    for (let i = 1; i <= 50; i++) {
-      const isCurrentUser = user?.uid === `_mock_${i}`; // This logic needs to be better
-      if(isCurrentUser) currentUserInList = true;
-      
-      data.push({
-        rank: i,
-        uid: `*******${Math.floor(1000 + Math.random() * 9000)}`,
-        tokens: Math.floor(500000 / i + Math.random() * 1000),
-        isCurrentUser: false,
-      });
-    }
+    const sortedUsers = Object.values(allUsers)
+      .sort((a, b) => b.tokenBalance - a.tokenBalance);
 
-    // Try to insert current user into a random spot if they exist and are not top 50
-    if(user) {
-        const currentUserRank = data.findIndex(u => u.tokens < user.tokenBalance);
-        if(currentUserRank !== -1) {
-            data.splice(currentUserRank, 0, {
-                rank: currentUserRank + 1,
-                uid: user.uid,
-                tokens: user.tokenBalance,
-                isCurrentUser: true,
-            });
-            data.pop(); // keep it to 50
-            // re-rank
-            data.forEach((u, i) => u.rank = i + 1);
+    const rankedUsers: LeaderboardUser[] = sortedUsers.map((u, index) => ({
+      rank: index + 1,
+      uid: u.uid.startsWith('admin') ? 'Pika Admin' : `*******${u.uid.slice(-4)}`,
+      tokens: u.tokenBalance,
+      isCurrentUser: user?.uid === u.uid,
+    }));
+    
+    let top50 = rankedUsers.slice(0, 50);
+    const currentUserInTop50 = top50.some(u => u.isCurrentUser);
+
+    if (user && !currentUserInTop50) {
+      const currentUserRank = rankedUsers.find(u => u.isCurrentUser);
+      if (currentUserRank) {
+        // Replace last entry with current user if not in top 50
+        if (top50.length === 50) {
+          top50[49] = currentUserRank;
         } else {
-             data[49] = {
-                rank: 50,
-                uid: user.uid,
-                tokens: user.tokenBalance,
-                isCurrentUser: true,
-            };
+          top50.push(currentUserRank);
         }
+      }
     }
-
-
-    return data;
-  }, [user]);
+    
+    return top50;
+  }, [allUsers, user]);
 
   return (
     <div className="relative w-full max-w-4xl mx-auto mt-6">
@@ -86,10 +76,10 @@ export default function LeaderboardTab() {
               </TableHeader>
               <TableBody>
                 {leaderboardData.map((player) => (
-                  <TableRow key={player.rank} className={player.isCurrentUser ? 'bg-secondary/50' : ''}>
+                  <TableRow key={player.rank} className={player.isCurrentUser ? 'bg-primary/20 hover:bg-primary/30' : ''}>
                     <TableCell className="font-medium text-lg">{player.rank}</TableCell>
                     <TableCell>{player.uid}</TableCell>
-                    <TableCell className="text-right font-semibold text-primary">{player.tokens.toLocaleString()}</TableCell>
+                    <TableCell className="text-right font-semibold text-primary">{Math.floor(player.tokens).toLocaleString()}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

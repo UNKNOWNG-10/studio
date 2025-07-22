@@ -60,6 +60,7 @@ interface UserContextType {
   approveTransaction: (transactionId: string, targetUserId: string) => void;
   rejectTransaction: (transactionId: string, targetUserId: string) => void;
   getAllTransactions: () => Transaction[];
+  getAllUsers: () => { [key: string]: User };
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -414,13 +415,13 @@ const UserProviderContent = ({ children }: { children: ReactNode }) => {
     const milestone = referralMilestones.find(m => m.id === milestoneId);
     if (!milestone) return false;
 
-    const referralsCount = user.referrals.length;
+    const referralsCount = user.referrals?.length || 0;
     if (referralsCount < milestone.requiredRefs) {
         toast({ title: 'Cannot Claim', description: 'You have not reached the required number of referrals.', variant: 'destructive' });
         return false;
     }
 
-    if (user.claimedReferralMilestones.includes(milestoneId)) {
+    if ((user.claimedReferralMilestones || []).includes(milestoneId)) {
         toast({ title: 'Already Claimed', description: 'You have already claimed this milestone reward.', variant: 'destructive' });
         return false;
     }
@@ -437,7 +438,7 @@ const UserProviderContent = ({ children }: { children: ReactNode }) => {
     const updatedUser: User = {
         ...user,
         tokenBalance: user.tokenBalance + milestone.reward,
-        claimedReferralMilestones: [...user.claimedReferralMilestones, milestone.id],
+        claimedReferralMilestones: [...(user.claimedReferralMilestones || []), milestone.id],
         transactions: [newTransaction, ...(user.transactions || [])],
     };
 
@@ -464,8 +465,12 @@ const UserProviderContent = ({ children }: { children: ReactNode }) => {
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }
 
+  const getAllUsers = (): { [key: string]: User } => {
+    return users;
+  }
+
   return (
-    <UserContext.Provider value={{ user, loading, isAdmin: user?.isAdmin || false, tasks, referralMilestones, login, logout, updateTokenBalance, stakeTokens, withdrawTokens, claimTaskReward, claimReferralMilestone, addTask, approveTransaction, rejectTransaction, getAllTransactions }}>
+    <UserContext.Provider value={{ user, loading, isAdmin: user?.isAdmin || false, tasks, referralMilestones, login, logout, updateTokenBalance, stakeTokens, withdrawTokens, claimTaskReward, claimReferralMilestone, addTask, approveTransaction, rejectTransaction, getAllTransactions, getAllUsers }}>
       {children}
     </UserContext.Provider>
   );
