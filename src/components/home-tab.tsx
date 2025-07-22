@@ -44,14 +44,18 @@ export default function HomeTab() {
       toast({ title: 'Error', description: 'Please enter an order ID.', variant: 'destructive' });
       return;
     }
+    if (user && user.tokenBalance < 1000) {
+      toast({ title: 'Error', description: 'You need at least 1000 Pika Tokens to stake.', variant: 'destructive' });
+      return;
+    }
     setIsStaking(true);
     const success = await stakeTokens(stakeOrderId);
     if (success) {
-      toast({ title: 'Success', description: 'Your stake is approved and Pika Tokens have been added.' });
+      toast({ title: 'Success', description: 'Your stake is approved and 1000 Pika Tokens have been staked.' });
       setStakeOrderId('');
       setStakeDialogOpen(false);
     } else {
-      toast({ title: 'Error', description: 'Staking failed. Please try again.', variant: 'destructive' });
+      toast({ title: 'Error', description: 'Staking failed. You may have already staked or have insufficient balance.', variant: 'destructive' });
     }
     setIsStaking(false);
   };
@@ -122,17 +126,23 @@ export default function HomeTab() {
           <CardFooter className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Dialog open={isStakeDialogOpen} onOpenChange={setStakeDialogOpen}>
               <DialogTrigger asChild>
-                <Button className="w-full" size="lg">Stake Pika Tokens</Button>
+                <Button className="w-full" size="lg" disabled={user?.hasStaked}>
+                  {user?.hasStaked ? 'Already Staked' : 'Stake Pika Tokens'}
+                  </Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Stake Your Pika Tokens</DialogTitle>
+                  <DialogTitle>Stake 1000 Pika Tokens</DialogTitle>
                   <DialogDescription>
-                    To stake, please send 0.05 USDT to the Binance ID below and enter your order ID to confirm.
+                    To stake, please send 0.05 USDT to the Binance ID below and enter your order ID to confirm your one-time stake of 1000 Pika Tokens.
                   </DialogDescription>
                 </DialogHeader>
                 <div className="py-4 space-y-4">
                     <p className="font-semibold">Binance ID: <span className="font-mono text-primary bg-secondary px-2 py-1 rounded">522150826</span></p>
+                    <div className="bg-muted p-4 rounded-lg text-center">
+                        <p className="text-sm text-muted-foreground">Staking Amount</p>
+                        <p className="text-2xl font-bold">1,000 Pika Tokens</p>
+                    </div>
                     <div>
                         <Label htmlFor="orderId">Order ID</Label>
                         <Input id="orderId" value={stakeOrderId} onChange={e => setStakeOrderId(e.target.value)} placeholder="Enter your transaction order ID" />

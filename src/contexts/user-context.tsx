@@ -22,6 +22,7 @@ interface User {
   isAdmin: boolean;
   tokenBalance: number;
   stakedBalance: number;
+  hasStaked: boolean; // To track if user has staked once
   tasksCompleted: { [key: string]: boolean };
   transactions: Transaction[];
 }
@@ -92,6 +93,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       isAdmin,
       tokenBalance: 1000,
       stakedBalance: 0,
+      hasStaked: false,
       tasksCompleted: {},
       transactions: [newTransaction],
     };
@@ -121,12 +123,14 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   };
   
   const stakeTokens = async (orderId: string): Promise<boolean> => {
-    if (!user) return false;
+    if (!user || user.hasStaked) return false;
     
     await new Promise(resolve => setTimeout(resolve, 2000));
     
-    const stakeAmount = 5000;
+    const stakeAmount = 1000;
     
+    if (user.tokenBalance < stakeAmount) return false;
+
     const newTransaction: Transaction = {
       id: `tx_${Date.now()}`,
       type: 'stake',
@@ -137,7 +141,9 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
 
     const updatedUser = {
       ...user,
+      tokenBalance: user.tokenBalance - stakeAmount,
       stakedBalance: user.stakedBalance + stakeAmount,
+      hasStaked: true,
       transactions: [newTransaction, ...(user.transactions || [])],
     };
     updateUserInStateAndStorage(updatedUser);
