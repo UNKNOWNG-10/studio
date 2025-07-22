@@ -102,7 +102,7 @@ export default function HomeTab() {
 
   const handleReject = (txId: string, uid: string) => {
     rejectTransaction(txId, uid);
-    toast({ title: 'Success', description: 'Transaction rejected. Tokens have been returned to the user.'});
+    toast({ title: 'Success', description: 'Transaction rejected.'});
   }
 
   const hourlyEarning = (user?.stakedBalance || 0) * (0.03 / 24) * 45; 
@@ -244,7 +244,7 @@ export default function HomeTab() {
                       <Badge variant={
                         tx.type === 'stake' ? 'default' : 
                         tx.type === 'withdraw' ? 'secondary' :
-                        tx.type === 'task' || tx.type === 'earning' || tx.type === 'referral_bonus' || tx.type === 'login_bonus' ? 'outline' :
+                        tx.type === 'task' || tx.type === 'earning' || tx.type === 'referral_bonus' || tx.type === 'login_bonus' || tx.type === 'task_submission' ? 'outline' :
                         'default'
                       } className="capitalize">{tx.type.replace('_', ' ')}</Badge>
                     </TableCell>

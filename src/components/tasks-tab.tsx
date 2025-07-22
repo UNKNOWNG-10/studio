@@ -11,6 +11,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Textarea } from '@/components/ui/textarea';
 
 const iconMap: { [key: string]: React.ReactNode } = {
   Twitter: <Twitter className="h-6 w-6 text-sky-500" />,
@@ -28,12 +30,14 @@ const getIcon = (iconName?: string) => {
     return <Tag className="h-6 w-6 text-gray-500" />;
 }
 
-const ONE_TIME_TASKS = ['follow_twitter', 'join_telegram', 'first_stake'];
+const ONE_TIME_TASKS = ['follow_twitter', 'join_telegram', 'first_stake', 'submit_tweet'];
 
 const TaskCard = ({ task }: { task: Task }) => {
   const { user, claimTaskReward } = useUser();
   const [timeLeft, setTimeLeft] = useState(0);
   const [isClaiming, setIsClaiming] = useState(false);
+  const [submission, setSubmission] = useState('');
+  const [isSubmitDialogOpen, setIsSubmitDialogOpen] = useState(false);
   const [hasVisitedLink, setHasVisitedLink] = useState(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem(`visited_${task.id}`) === 'true';
@@ -41,7 +45,13 @@ const TaskCard = ({ task }: { task: Task }) => {
     return false;
   });
 
-  const lastCompleted = user?.tasksCompleted[task.id];
+  if (!user) return null;
+
+  const lastCompleted = user.tasksCompleted[task.id];
+  const pendingTransaction = user.transactions.find(
+    (tx) => tx.taskId === task.id && tx.status === 'pending'
+  );
+
   const isOneTimeTask = ONE_TIME_TASKS.includes(task.id);
   
   const cooldown = task.id === 'watch_ad' ? 5 * 1000 : 60 * 1000;
@@ -64,9 +74,11 @@ const TaskCard = ({ task }: { task: Task }) => {
   
   const handleClaim = async () => {
     setIsClaiming(true);
-    const success = await claimTaskReward(task.id, task.reward);
+    const success = await claimTaskReward(task.id);
     if (success) {
-      toast({ title: "Reward Claimed!", description: `You received ${task.reward.toLocaleString()} Pika Tokens.` });
+      if (!task.requiresApproval) {
+        toast({ title: "Reward Claimed!", description: `You received ${task.reward.toLocaleString()} Pika Tokens.` });
+      }
     } else {
       let description = "Please wait for the timer to finish.";
       if (isOneTimeTask) {
@@ -79,11 +91,26 @@ const TaskCard = ({ task }: { task: Task }) => {
     setIsClaiming(false);
   }
 
+  const handleSubmitForApproval = async () => {
+    setIsClaiming(true);
+    const success = await claimTaskReward(task.id, submission);
+    if (success) {
+        setIsSubmitDialogOpen(false);
+        setSubmission('');
+    } else {
+       toast({ title: "Submission Failed", description: "You may have already submitted this task.", variant: "destructive" });
+    }
+    setIsClaiming(false);
+  }
+
+
   const handleAction = () => {
     if (task.url) {
       window.open(task.url, '_blank');
       localStorage.setItem(`visited_${task.id}`, 'true');
       setHasVisitedLink(true);
+    } else if (task.requiresApproval) {
+      setIsSubmitDialogOpen(true);
     } else {
       handleClaim();
     }
@@ -100,7 +127,13 @@ const TaskCard = ({ task }: { task: Task }) => {
   let isButtonDisabled = isClaiming || (isOneTimeTask && isCompletedOnce) || timeLeft > 0;
   let buttonText = 'Claim Reward';
   
-  if (task.url && !hasVisitedLink && !isCompletedOnce) {
+  if (pendingTransaction) {
+    buttonText = 'Pending Approval';
+    isButtonDisabled = true;
+  } else if (task.requiresApproval) {
+    buttonText = 'Submit for Approval';
+    isButtonDisabled = isClaiming || (isOneTimeTask && isCompletedOnce);
+  } else if (task.url && !hasVisitedLink && !isCompletedOnce) {
     buttonText = 'Go to Link';
     isButtonDisabled = false;
   } else if(task.url && hasVisitedLink && !isCompletedOnce) {
@@ -121,8 +154,8 @@ const TaskCard = ({ task }: { task: Task }) => {
     buttonText = isCompletedOnce ? 'Claim Again' : 'Claim Reward';
   }
 
-
   return (
+    <>
     <Card className="shadow-lg hover:shadow-xl transition-shadow bg-card/80 backdrop-blur-sm flex flex-col justify-between">
       <CardHeader className="flex flex-row items-center gap-4">
         <div className="bg-secondary p-3 rounded-full">{getIcon(task.icon)}</div>
@@ -136,11 +169,11 @@ const TaskCard = ({ task }: { task: Task }) => {
            {!task.url || (task.url && hasVisitedLink) || (isCompletedOnce) ? (
             <Button
               className="w-full"
-              onClick={handleClaim}
+              onClick={handleAction}
               disabled={isButtonDisabled}
             >
               {isClaiming && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isOneTimeTask && isCompletedOnce && <Check className="mr-2 h-4 w-4" />}
+              {isOneTimeTask && isCompletedOnce && !pendingTransaction && <Check className="mr-2 h-4 w-4" />}
               {buttonText}
             </Button>
            ) : (
@@ -159,6 +192,36 @@ const TaskCard = ({ task }: { task: Task }) => {
         </div>
       </CardFooter>
     </Card>
+    {task.requiresApproval && (
+    <Dialog open={isSubmitDialogOpen} onOpenChange={setIsSubmitDialogOpen}>
+        <DialogContent>
+        <DialogHeader>
+            <DialogTitle>Submit Task: {task.title}</DialogTitle>
+            <DialogDescription>
+            Provide the required information for admin approval. For example, a link to your tweet.
+            </DialogDescription>
+        </DialogHeader>
+        <div className="py-4 space-y-4">
+            <div>
+            <Label htmlFor="submissionData">Submission Data</Label>
+            <Textarea 
+                id="submissionData" 
+                value={submission} 
+                onChange={(e) => setSubmission(e.target.value)} 
+                placeholder="e.g., https://x.com/username/status/12345"
+            />
+            </div>
+        </div>
+        <DialogFooter>
+            <Button onClick={handleSubmitForApproval} disabled={isClaiming || !submission}>
+                {isClaiming && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Submit
+            </Button>
+        </DialogFooter>
+        </DialogContent>
+    </Dialog>
+    )}
+    </>
   );
 }
 
@@ -168,6 +231,7 @@ export default function TasksTab() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTaskReward, setNewTaskReward] = useState('');
+  const [newTaskRequiresApproval, setNewTaskRequiresApproval] = useState(false);
 
   const handleAddTask = () => {
     const reward = parseInt(newTaskReward, 10);
@@ -179,13 +243,14 @@ export default function TasksTab() {
       });
       return;
     }
-    addTask({ title: newTaskTitle, reward });
+    addTask({ title: newTaskTitle, reward, requiresApproval: newTaskRequiresApproval });
     toast({
       title: 'Task Added',
       description: `Successfully added task: ${newTaskTitle}`,
     });
     setNewTaskTitle('');
     setNewTaskReward('');
+    setNewTaskRequiresApproval(false);
     setIsDialogOpen(false);
   };
 
@@ -240,6 +305,10 @@ export default function TasksTab() {
                       onChange={(e) => setNewTaskReward(e.target.value)} 
                       placeholder="e.g., 250"
                     />
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox id="requiresApproval" checked={newTaskRequiresApproval} onCheckedChange={(checked) => setNewTaskRequiresApproval(checked as boolean)} />
+                    <Label htmlFor="requiresApproval">Requires Admin Approval</Label>
                   </div>
                 </div>
                 <DialogFooter>

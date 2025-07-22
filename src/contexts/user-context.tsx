@@ -7,11 +7,12 @@ import { useSearchParams } from 'next/navigation';
 
 export type Transaction = {
   id: string;
-  type: 'stake' | 'withdraw' | 'task' | 'login_bonus' | 'earning' | 'referral_bonus' | 'referral_milestone';
+  type: 'stake' | 'withdraw' | 'task' | 'login_bonus' | 'earning' | 'referral_bonus' | 'referral_milestone' | 'task_submission';
   amount: number;
   date: string;
   description: string;
   status: 'pending' | 'approved' | 'completed' | 'rejected';
+  taskId?: string; // Link transaction to a specific task
 };
 
 export type Task = {
@@ -20,6 +21,7 @@ export type Task = {
   reward: number;
   icon?: string;
   url?: string;
+  requiresApproval?: boolean;
 };
 
 export interface User {
@@ -54,9 +56,9 @@ interface UserContextType {
   updateTokenBalance: (amount: number) => void;
   stakeTokens: (orderId: string) => Promise<boolean>;
   withdrawTokens: (amount: number) => boolean;
-  claimTaskReward: (taskId: string, reward: number) => Promise<boolean>;
+  claimTaskReward: (taskId: string, submission?: string) => Promise<boolean>;
   claimReferralMilestone: (milestoneId: number) => Promise<boolean>;
-  addTask: (task: Omit<Task, 'id' | 'url'>) => void;
+  addTask: (task: Omit<Task, 'id'>) => void;
   approveTransaction: (transactionId: string, targetUserId: string) => void;
   rejectTransaction: (transactionId: string, targetUserId: string) => void;
   getAllTransactions: () => Transaction[];
@@ -70,6 +72,7 @@ const initialTasks: Task[] = [
   { id: 'join_telegram', title: 'Join our Telegram Channel', reward: 500, icon: 'Send' },
   { id: 'first_stake', title: 'Make your first stake', reward: 1000, icon: 'Gift' },
   { id: 'watch_ad', title: 'Watch an Ad', reward: 100, icon: 'Tv' },
+  { id: 'submit_tweet', title: 'Tweet about Pika Token', reward: 1500, icon: 'Twitter', requiresApproval: true },
 ];
 
 const referralMilestones: ReferralMilestone[] = [
@@ -87,7 +90,7 @@ const referralMilestones: ReferralMilestone[] = [
 const ADMIN_UID = "admin_user_123";
 const HOURLY_EARNING_RATE_FACTOR = (0.03 / 24) * 45;
 const MINIMUM_WITHDRAWAL_AMOUNT = 100000;
-const ONE_TIME_TASKS = ['follow_twitter', 'join_telegram', 'first_stake'];
+const ONE_TIME_TASKS = ['follow_twitter', 'join_telegram', 'first_stake', 'submit_tweet'];
 
 const UserProviderContent = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -296,48 +299,55 @@ const UserProviderContent = ({ children }: { children: ReactNode }) => {
 
     const tx = targetUser.transactions.find(t => t.id === transactionId);
     if (!tx || tx.status !== 'pending') return;
+    
+    let updatedUser = { ...targetUser };
 
     if (tx.type === 'stake') {
-        targetUser = {
-            ...targetUser,
-            stakedBalance: targetUser.stakedBalance + tx.amount,
+        updatedUser = {
+            ...updatedUser,
+            stakedBalance: updatedUser.stakedBalance + tx.amount,
             hasStaked: true,
             lastPayoutTime: new Date().toISOString()
         };
 
         // Referral logic
-        if (targetUser.referrerId && allUsers[targetUser.referrerId]) {
-            let referrer = allUsers[targetUser.referrerId];
+        if (updatedUser.referrerId && allUsers[updatedUser.referrerId]) {
+            let referrer = allUsers[updatedUser.referrerId];
             const referralBonus = 300;
             const bonusTransaction: Transaction = {
                 id: `tx_ref_${Date.now()}`,
                 type: 'referral_bonus',
                 amount: referralBonus,
                 date: new Date().toISOString(),
-                description: `Referral bonus from user ${targetUser.uid}`,
+                description: `Referral bonus from user ${updatedUser.uid}`,
                 status: 'completed',
             };
             referrer = {
                 ...referrer,
                 tokenBalance: referrer.tokenBalance + referralBonus,
                 transactions: [bonusTransaction, ...(referrer.transactions || [])],
-                referrals: [...(referrer.referrals || []), targetUser.uid],
+                referrals: [...(referrer.referrals || []), updatedUser.uid],
             }
             allUsers[referrer.uid] = referrer;
         }
+    } else if (tx.type === 'task_submission') {
+        updatedUser = {
+            ...updatedUser,
+            tokenBalance: updatedUser.tokenBalance + tx.amount
+        }
     }
     
-    const updatedTransactions = targetUser.transactions.map(t => 
-      t.id === transactionId ? { ...t, status: 'approved' as const, description: t.description.replace('request', 'approved') } : t
+    const updatedTransactions = updatedUser.transactions.map(t => 
+      t.id === transactionId ? { ...t, status: 'approved' as const, description: t.description.replace('Submission', 'Approved') } : t
     );
 
-    targetUser.transactions = updatedTransactions;
-    allUsers[targetUserId] = targetUser;
+    updatedUser.transactions = updatedTransactions;
+    allUsers[targetUserId] = updatedUser;
     
     setUsers(allUsers);
     localStorage.setItem('pikaTokenUsers', JSON.stringify(allUsers));
     if (user.uid === targetUserId) {
-      setUser(targetUser);
+      setUser(updatedUser);
     }
   }
   
@@ -351,28 +361,35 @@ const UserProviderContent = ({ children }: { children: ReactNode }) => {
     const tx = targetUser.transactions.find(t => t.id === transactionId);
     if (!tx || tx.status !== 'pending') return;
     
-    targetUser = { 
-        ...targetUser,
-        tokenBalance: targetUser.tokenBalance + tx.amount
-    };
-
-    const updatedTransactions = targetUser.transactions.map(t =>
-      t.id === transactionId ? { ...t, status: 'rejected' as const, description: t.description.replace('request', 'rejected') } : t
+    let updatedUser = { ...targetUser };
+    
+    if (tx.type === 'stake' || tx.type === 'withdraw') {
+        updatedUser = { 
+            ...updatedUser,
+            tokenBalance: updatedUser.tokenBalance + tx.amount
+        };
+    }
+    
+    const updatedTransactions = updatedUser.transactions.map(t =>
+      t.id === transactionId ? { ...t, status: 'rejected' as const, description: t.description.replace('request', 'rejected').replace('Submission', 'Rejected') } : t
     );
 
-    targetUser.transactions = updatedTransactions;
-    allUsers[targetUserId] = targetUser;
+    updatedUser.transactions = updatedTransactions;
+    allUsers[targetUserId] = updatedUser;
 
     setUsers(allUsers);
     localStorage.setItem('pikaTokenUsers', JSON.stringify(allUsers));
     if (user.uid === targetUserId) {
-      setUser(targetUser);
+      setUser(updatedUser);
     }
   };
 
 
-  const claimTaskReward = async (taskId: string, reward: number): Promise<boolean> => {
+  const claimTaskReward = async (taskId: string, submission?: string): Promise<boolean> => {
     if (!user) return false;
+    
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return false;
 
     const lastCompleted = user.tasksCompleted[taskId];
     const now = new Date();
@@ -386,14 +403,31 @@ const UserProviderContent = ({ children }: { children: ReactNode }) => {
          return false;
        }
     }
-    
-    const task = tasks.find(t => t.id === taskId);
-    if (!task) return false;
 
+    if (task.requiresApproval) {
+        const newTransaction: Transaction = {
+          id: `tx_tasksub_${Date.now()}`,
+          type: 'task_submission',
+          amount: task.reward,
+          date: now.toISOString(),
+          description: `Task Submission: ${task.title}. ${submission ? `Data: ${submission}`: ''}`,
+          status: 'pending',
+          taskId: taskId
+        };
+        const updatedUser = {
+          ...user,
+          tasksCompleted: { ...user.tasksCompleted, [taskId]: now.toISOString() },
+          transactions: [newTransaction, ...(user.transactions || [])],
+        };
+        updateUserAndSave(updatedUser);
+        toast({ title: "Task Submitted", description: "Your submission is pending admin approval." });
+        return true;
+    }
+    
     const newTransaction: Transaction = {
       id: `tx_task_${Date.now()}`,
       type: 'task',
-      amount: reward,
+      amount: task.reward,
       date: now.toISOString(),
       description: `Reward for task: ${task.title}`,
       status: 'completed'
@@ -401,7 +435,7 @@ const UserProviderContent = ({ children }: { children: ReactNode }) => {
 
     const updatedUser = {
       ...user,
-      tokenBalance: user.tokenBalance + reward,
+      tokenBalance: user.tokenBalance + task.reward,
       tasksCompleted: { ...user.tasksCompleted, [taskId]: now.toISOString() },
       transactions: [newTransaction, ...(user.transactions || [])],
     };
@@ -447,7 +481,7 @@ const UserProviderContent = ({ children }: { children: ReactNode }) => {
     return true;
   };
 
-  const addTask = (task: Omit<Task, 'id' | 'url'>) => {
+  const addTask = (task: Omit<Task, 'id'>) => {
     if(!user || !user.isAdmin) return;
 
     const newTask: Task = {
