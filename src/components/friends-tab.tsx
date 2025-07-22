@@ -17,8 +17,8 @@ const MilestoneCard = ({ milestone }: { milestone: ReferralMilestone }) => {
 
   if (!user) return null;
 
-  const referralsCount = user.referrals.length;
-  const isClaimed = user.claimedReferralMilestones.includes(milestone.id);
+  const referralsCount = user.referrals?.length || 0;
+  const isClaimed = (user.claimedReferralMilestones || []).includes(milestone.id);
   const canClaim = referralsCount >= milestone.requiredRefs && !isClaimed;
 
   const handleClaim = async () => {
