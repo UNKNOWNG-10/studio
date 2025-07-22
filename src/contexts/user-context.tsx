@@ -7,7 +7,7 @@ import { useSearchParams } from 'next/navigation';
 
 export type Transaction = {
   id: string;
-  type: 'stake' | 'withdraw' | 'task' | 'login_bonus' | 'earning' | 'referral_bonus';
+  type: 'stake' | 'withdraw' | 'task' | 'login_bonus' | 'earning' | 'referral_bonus' | 'referral_milestone';
   amount: number;
   date: string;
   description: string;
@@ -22,7 +22,7 @@ export type Task = {
   url?: string;
 };
 
-interface User {
+export interface User {
   uid: string;
   isAdmin: boolean;
   tokenBalance: number;
@@ -33,19 +33,29 @@ interface User {
   lastPayoutTime?: string;
   referrerId?: string;
   referrals: string[];
+  claimedReferralMilestones: number[];
 }
+
+export type ReferralMilestone = {
+  id: number;
+  requiredRefs: number;
+  reward: number;
+  title: string;
+};
 
 interface UserContextType {
   user: User | null;
   loading: boolean;
   isAdmin: boolean;
   tasks: Task[];
+  referralMilestones: ReferralMilestone[];
   login: (uid: string) => void;
   logout: () => void;
   updateTokenBalance: (amount: number) => void;
   stakeTokens: (orderId: string) => Promise<boolean>;
   withdrawTokens: (amount: number) => boolean;
   claimTaskReward: (taskId: string, reward: number) => Promise<boolean>;
+  claimReferralMilestone: (milestoneId: number) => Promise<boolean>;
   addTask: (task: Omit<Task, 'id' | 'url'>) => void;
   approveTransaction: (transactionId: string, targetUserId: string) => void;
   rejectTransaction: (transactionId: string, targetUserId: string) => void;
@@ -59,6 +69,18 @@ const initialTasks: Task[] = [
   { id: 'join_telegram', title: 'Join our Telegram Channel', reward: 500, icon: 'Send' },
   { id: 'first_stake', title: 'Make your first stake', reward: 1000, icon: 'Gift' },
   { id: 'watch_ad', title: 'Watch an Ad', reward: 100, icon: 'Tv' },
+];
+
+const referralMilestones: ReferralMilestone[] = [
+    { id: 1, requiredRefs: 1, reward: 200, title: '1 Referral' },
+    { id: 2, requiredRefs: 5, reward: 700, title: '5 Referrals' },
+    { id: 3, requiredRefs: 10, reward: 1400, title: '10 Referrals' },
+    { id: 4, requiredRefs: 25, reward: 3000, title: '25 Referrals' },
+    { id: 5, requiredRefs: 50, reward: 5500, title: '50 Referrals' },
+    { id: 6, requiredRefs: 100, reward: 14000, title: '100 Referrals' },
+    { id: 7, requiredRefs: 250, reward: 35000, title: '250 Referrals' },
+    { id: 8, requiredRefs: 500, reward: 75000, title: '500 Referrals' },
+    { id: 9, requiredRefs: 1000, reward: 180000, title: '1000 Referrals' },
 ];
 
 const ADMIN_UID = "admin_user_123";
@@ -198,6 +220,7 @@ const UserProviderContent = ({ children }: { children: ReactNode }) => {
       lastPayoutTime: new Date().toISOString(),
       referrerId: ref || undefined,
       referrals: [],
+      claimedReferralMilestones: [],
     };
     
     updateUserAndSave(newUser);
@@ -284,7 +307,7 @@ const UserProviderContent = ({ children }: { children: ReactNode }) => {
         // Referral logic
         if (targetUser.referrerId && allUsers[targetUser.referrerId]) {
             let referrer = allUsers[targetUser.referrerId];
-            const referralBonus = 100;
+            const referralBonus = 300;
             const bonusTransaction: Transaction = {
                 id: `tx_ref_${Date.now()}`,
                 type: 'referral_bonus',
@@ -384,6 +407,44 @@ const UserProviderContent = ({ children }: { children: ReactNode }) => {
     updateUserAndSave(updatedUser);
     return true;
   };
+  
+  const claimReferralMilestone = async (milestoneId: number): Promise<boolean> => {
+    if (!user) return false;
+
+    const milestone = referralMilestones.find(m => m.id === milestoneId);
+    if (!milestone) return false;
+
+    const referralsCount = user.referrals.length;
+    if (referralsCount < milestone.requiredRefs) {
+        toast({ title: 'Cannot Claim', description: 'You have not reached the required number of referrals.', variant: 'destructive' });
+        return false;
+    }
+
+    if (user.claimedReferralMilestones.includes(milestoneId)) {
+        toast({ title: 'Already Claimed', description: 'You have already claimed this milestone reward.', variant: 'destructive' });
+        return false;
+    }
+    
+    const newTransaction: Transaction = {
+      id: `tx_milestone_${Date.now()}`,
+      type: 'referral_milestone',
+      amount: milestone.reward,
+      date: new Date().toISOString(),
+      description: `Reward for milestone: ${milestone.title}`,
+      status: 'completed'
+    };
+
+    const updatedUser: User = {
+        ...user,
+        tokenBalance: user.tokenBalance + milestone.reward,
+        claimedReferralMilestones: [...user.claimedReferralMilestones, milestone.id],
+        transactions: [newTransaction, ...(user.transactions || [])],
+    };
+
+    updateUserAndSave(updatedUser);
+    toast({ title: 'Reward Claimed!', description: `You received ${milestone.reward.toLocaleString()} Pika Tokens.` });
+    return true;
+  };
 
   const addTask = (task: Omit<Task, 'id' | 'url'>) => {
     if(!user || !user.isAdmin) return;
@@ -404,7 +465,7 @@ const UserProviderContent = ({ children }: { children: ReactNode }) => {
   }
 
   return (
-    <UserContext.Provider value={{ user, loading, isAdmin: user?.isAdmin || false, tasks, login, logout, updateTokenBalance, stakeTokens, withdrawTokens, claimTaskReward, addTask, approveTransaction, rejectTransaction, getAllTransactions }}>
+    <UserContext.Provider value={{ user, loading, isAdmin: user?.isAdmin || false, tasks, referralMilestones, login, logout, updateTokenBalance, stakeTokens, withdrawTokens, claimTaskReward, claimReferralMilestone, addTask, approveTransaction, rejectTransaction, getAllTransactions }}>
       {children}
     </UserContext.Provider>
   );
