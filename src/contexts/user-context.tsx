@@ -56,6 +56,7 @@ const initialTasks: Task[] = [
 
 const ADMIN_UID = "admin_user_123";
 const HOURLY_EARNING_RATE_FACTOR = (0.03 / 24) * 45; // ~54.16 tokens per hour for 1000 staked
+const MINIMUM_WITHDRAWAL_AMOUNT = 100000;
 
 export const UserProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -189,7 +190,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   };
   
   const withdrawTokens = (amount: number): boolean => {
-    if (!user || user.tokenBalance < amount) return false;
+    if (!user || user.tokenBalance < amount || amount < MINIMUM_WITHDRAWAL_AMOUNT) return false;
     
     const newTransaction: Transaction = {
       id: `tx_withdraw_${Date.now()}`,
@@ -308,3 +309,5 @@ export const useUser = () => {
   }
   return context;
 };
+
+    

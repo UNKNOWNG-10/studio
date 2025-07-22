@@ -74,6 +74,10 @@ export default function HomeTab() {
       toast({ title: "Error", description: "Please enter a valid amount.", variant: "destructive" });
       return;
     }
+    if (amount < 100000) {
+      toast({ title: "Error", description: "Minimum withdrawal amount is 100,000 Pika Tokens.", variant: "destructive" });
+      return;
+    }
     if (user && user.tokenBalance < amount) {
         toast({ title: "Error", description: "Insufficient Pika Token balance.", variant: "destructive" });
         return;
@@ -84,7 +88,7 @@ export default function HomeTab() {
       setWithdrawAmount('');
       setWithdrawDialogOpen(false);
     } else {
-      toast({ title: "Error", description: "Insufficient Pika Token balance.", variant: "destructive" });
+      toast({ title: "Error", description: "Withdrawal request failed. Please check your balance and the minimum withdrawal amount.", variant: "destructive" });
     }
   };
   
@@ -193,13 +197,13 @@ export default function HomeTab() {
                 <DialogHeader>
                   <DialogTitle>Withdraw Pika Tokens</DialogTitle>
                   <DialogDescription>
-                    Convert your Pika Tokens to USDT. Rate: 10,000 Pika Tokens = 1 USDT. Your withdrawal will be processed after admin approval.
+                    Convert your Pika Tokens to USDT. Rate: 10,000 Pika Tokens = 1 USDT. Minimum withdrawal is 100,000 tokens. Your withdrawal will be processed after admin approval.
                   </DialogDescription>
                 </DialogHeader>
                 <div className="py-4 space-y-4">
                     <div>
                         <Label htmlFor="withdrawAmount">Pika Token Amount to Withdraw</Label>
-                        <Input id="withdrawAmount" type="number" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} placeholder="e.g., 10000" />
+                        <Input id="withdrawAmount" type="number" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} placeholder="e.g., 100000" />
                     </div>
                     {withdrawAmount && <p className="font-semibold text-center text-lg">You will receive: <span className="text-primary">{(parseFloat(withdrawAmount) * tokenToUsdtRate).toFixed(4)} USDT</span></p>}
                 </div>
@@ -280,3 +284,5 @@ export default function HomeTab() {
     </div>
   );
 }
+
+    
