@@ -34,7 +34,12 @@ const TaskCard = ({ task }: { task: Task }) => {
   const { user, claimTaskReward } = useUser();
   const [timeLeft, setTimeLeft] = useState(0);
   const [isClaiming, setIsClaiming] = useState(false);
-  const [hasVisitedLink, setHasVisitedLink] = useState(false);
+  const [hasVisitedLink, setHasVisitedLink] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem(`visited_${task.id}`) === 'true';
+    }
+    return false;
+  });
 
   const lastCompleted = user?.tasksCompleted[task.id];
   const isOneTimeTask = ONE_TIME_TASKS.includes(task.id);
@@ -77,6 +82,7 @@ const TaskCard = ({ task }: { task: Task }) => {
   const handleAction = () => {
     if (task.url) {
       window.open(task.url, '_blank');
+      localStorage.setItem(`visited_${task.id}`, 'true');
       setHasVisitedLink(true);
     } else {
       handleClaim();
