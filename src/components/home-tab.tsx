@@ -8,14 +8,14 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
-import { Loader2, Clock, CheckCircle2 } from 'lucide-react';
+import { Loader2, Clock, CheckCircle2, XCircle } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import Image from 'next/image';
 
 export default function HomeTab() {
-  const { user, stakeTokens, withdrawTokens, approveTransaction, isAdmin } = useUser();
+  const { user, stakeTokens, withdrawTokens, approveTransaction, rejectTransaction, isAdmin } = useUser();
   
   const [stakeOrderId, setStakeOrderId] = useState('');
   const [isStaking, setIsStaking] = useState(false);
@@ -59,7 +59,7 @@ export default function HomeTab() {
     setIsStaking(true);
     const success = await stakeTokens(stakeOrderId);
     if (success) {
-      toast({ title: 'Request Sent', description: 'Your staking request is pending admin approval.' });
+      toast({ title: 'Request Sent', description: 'Your staking request is pending admin approval. 1000 Pika Tokens have been deducted from your balance.' });
       setStakeOrderId('');
       setStakeDialogOpen(false);
     } else {
@@ -74,9 +74,13 @@ export default function HomeTab() {
       toast({ title: "Error", description: "Please enter a valid amount.", variant: "destructive" });
       return;
     }
+    if (user && user.tokenBalance < amount) {
+        toast({ title: "Error", description: "Insufficient Pika Token balance.", variant: "destructive" });
+        return;
+    }
     const success = withdrawTokens(amount);
     if(success) {
-      toast({ title: "Request Sent", description: `Withdrawal request for ${amount.toLocaleString()} Pika Tokens is pending admin approval.` });
+      toast({ title: "Request Sent", description: `Withdrawal request for ${amount.toLocaleString()} Pika Tokens is pending admin approval. The amount has been deducted from your balance.` });
       setWithdrawAmount('');
       setWithdrawDialogOpen(false);
     } else {
@@ -87,6 +91,11 @@ export default function HomeTab() {
   const handleApprove = (txId: string) => {
     approveTransaction(txId);
     toast({ title: 'Success', description: 'Transaction approved.'});
+  }
+
+  const handleReject = (txId: string) => {
+    rejectTransaction(txId);
+    toast({ title: 'Success', description: 'Transaction rejected. Tokens have been returned to the user.'});
   }
 
   const hourlyEarning = (user?.stakedBalance || 0) * (0.03 / 24) * 45; 
@@ -178,11 +187,11 @@ export default function HomeTab() {
             
             <Dialog open={isWithdrawDialogOpen} onOpenChange={setWithdrawDialogOpen}>
               <DialogTrigger asChild>
-                <Button variant="outline" className="w-full" size="lg">Test Withdraw</Button>
+                <Button variant="outline" className="w-full" size="lg">Withdraw</Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Test Withdraw</DialogTitle>
+                  <DialogTitle>Withdraw Pika Tokens</DialogTitle>
                   <DialogDescription>
                     Convert your Pika Tokens to USDT. Rate: 10,000 Pika Tokens = 1 USDT. Your withdrawal will be processed after admin approval.
                   </DialogDescription>
@@ -238,17 +247,22 @@ export default function HomeTab() {
                         'destructive'
                       } className="capitalize bg-opacity-70">{tx.status}</Badge>
                     </TableCell>
-                    <TableCell className={`text-right font-semibold ${tx.type === 'withdraw' ? 'text-destructive' : 'text-green-600'}`}>
-                      {tx.type === 'withdraw' ? '-' : '+'}
+                    <TableCell className={`text-right font-semibold ${tx.amount > 0 && (tx.type === 'stake' || tx.type === 'withdraw') ? 'text-destructive' : 'text-green-600'}`}>
+                      {tx.type === 'stake' || tx.type === 'withdraw' ? '-' : '+'}
                       {tx.amount.toLocaleString(undefined, { maximumFractionDigits: 2 })}
                     </TableCell>
                     <TableCell className="text-right text-muted-foreground">{format(new Date(tx.date), "MMM d, yyyy")}</TableCell>
                      {isAdmin && (
                         <TableCell className="text-right">
                             {tx.status === 'pending' && (
-                                <Button size="sm" onClick={() => handleApprove(tx.id)} variant="outline">
-                                    <CheckCircle2 className="mr-2 h-4 w-4" /> Approve
-                                </Button>
+                                <div className="flex gap-2 justify-end">
+                                    <Button size="sm" onClick={() => handleApprove(tx.id)} variant="outline">
+                                        <CheckCircle2 className="mr-2 h-4 w-4" /> Approve
+                                    </Button>
+                                    <Button size="sm" onClick={() => handleReject(tx.id)} variant="destructive">
+                                        <XCircle className="mr-2 h-4 w-4" /> Reject
+                                    </Button>
+                                </div>
                             )}
                         </TableCell>
                      )}

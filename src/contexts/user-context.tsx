@@ -8,7 +8,7 @@ export type Transaction = {
   amount: number;
   date: string;
   description: string;
-  status: 'pending' | 'approved' | 'completed';
+  status: 'pending' | 'approved' | 'completed' | 'rejected';
 };
 
 export type Task = {
@@ -42,6 +42,7 @@ interface UserContextType {
   claimTaskReward: (taskId: string, reward: number) => void;
   addTask: (task: Omit<Task, 'id'>) => void;
   approveTransaction: (transactionId: string) => void;
+  rejectTransaction: (transactionId: string) => void;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -166,9 +167,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   const stakeTokens = async (orderId: string): Promise<boolean> => {
     if (!user || user.hasStaked) return false;
     
-    // This is now just a pending transaction, admin must approve
     const stakeAmount = 1000;
-    
     if (user.tokenBalance < stakeAmount) return false;
 
     const newTransaction: Transaction = {
@@ -182,6 +181,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
 
     const updatedUser = {
       ...user,
+      tokenBalance: user.tokenBalance - stakeAmount,
       transactions: [newTransaction, ...(user.transactions || [])],
     };
     updateUserInStateAndStorage(updatedUser);
@@ -196,12 +196,13 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       type: 'withdraw',
       amount: amount,
       date: new Date().toISOString(),
-      description: 'Test withdrawal request',
+      description: 'Withdrawal request',
       status: 'pending'
     };
 
     const updatedUser = { 
       ...user, 
+      tokenBalance: user.tokenBalance - amount,
       transactions: [newTransaction, ...(user.transactions || [])],
     };
     updateUserInStateAndStorage(updatedUser);
@@ -210,10 +211,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
 
   const approveTransaction = (transactionId: string) => {
     if (!user || !user.isAdmin) return;
-    
-    // In a real app, you'd fetch all users' data, but here we just manage one user at a time.
-    // This will only work for the currently logged-in user's transactions.
-    // For a multi-user app, this logic would need to be on a server.
+
     const tx = user.transactions.find(t => t.id === transactionId);
     if (!tx || tx.status !== 'pending') return;
 
@@ -222,22 +220,13 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     if (tx.type === 'stake') {
         updatedUser = {
             ...updatedUser,
-            tokenBalance: updatedUser.tokenBalance - tx.amount,
             stakedBalance: updatedUser.stakedBalance + tx.amount,
             hasStaked: true,
             lastPayoutTime: new Date().toISOString()
         }
     } else if (tx.type === 'withdraw') {
-        if(updatedUser.tokenBalance < tx.amount) {
-          // This can happen if they requested a withdraw then spent the tokens
-          // before approval. We'll just deny it by not processing.
-          // Or we can add a "denied" status. For now, let's just do nothing.
-          return;
-        }
-        updatedUser = {
-            ...updatedUser,
-            tokenBalance: updatedUser.tokenBalance - tx.amount
-        }
+        // The token balance was already subtracted on request. 
+        // No further action on balance needed for approval.
     }
     
     const updatedTransactions = updatedUser.transactions.map(t => 
@@ -247,6 +236,27 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     updatedUser.transactions = updatedTransactions;
     updateUserInStateAndStorage(updatedUser);
   }
+  
+  const rejectTransaction = (transactionId: string) => {
+    if (!user || !user.isAdmin) return;
+
+    const tx = user.transactions.find(t => t.id === transactionId);
+    if (!tx || tx.status !== 'pending') return;
+    
+    // Return the tokens to the user's balance
+    const updatedUser: User = { 
+        ...user,
+        tokenBalance: user.tokenBalance + tx.amount
+    };
+
+    const updatedTransactions = updatedUser.transactions.map(t =>
+      t.id === transactionId ? { ...t, status: 'rejected' as const, description: t.description.replace('request', 'rejected') } : t
+    );
+
+    updatedUser.transactions = updatedTransactions;
+    updateUserInStateAndStorage(updatedUser);
+  };
+
 
   const claimTaskReward = (taskId: string, reward: number) => {
     if (!user || user.tasksCompleted[taskId]) return;
@@ -285,7 +295,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <UserContext.Provider value={{ user, loading, isAdmin: user?.isAdmin || false, tasks, login, logout, updateTokenBalance, stakeTokens, withdrawTokens, claimTaskReward, addTask, approveTransaction }}>
+    <UserContext.Provider value={{ user, loading, isAdmin: user?.isAdmin || false, tasks, login, logout, updateTokenBalance, stakeTokens, withdrawTokens, claimTaskReward, addTask, approveTransaction, rejectTransaction }}>
       {children}
     </UserContext.Provider>
   );
