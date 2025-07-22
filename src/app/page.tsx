@@ -38,12 +38,12 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="container mx-auto flex items-center justify-between p-4 border-b">
-        <h1 className="text-2xl font-bold text-primary font-headline">Token Tycoon</h1>
+        <h1 className="text-2xl font-bold text-primary font-headline">Pika Token</h1>
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2 rounded-full bg-secondary px-4 py-2">
             <Wallet className="h-5 w-5 text-primary" />
             <span className="font-semibold text-lg">{Math.floor(user.tokenBalance).toLocaleString()}</span>
-            <span className="text-sm text-muted-foreground">Tokens</span>
+            <span className="text-sm text-muted-foreground">Pika Tokens</span>
           </div>
           <Button variant="ghost" size="icon" onClick={() => {
             logout();
@@ -76,7 +76,7 @@ export default function DashboardPage() {
         </Tabs>
       </main>
       <footer className="text-center p-4 text-muted-foreground text-sm border-t mt-8">
-        <p>&copy; {new Date().getFullYear()} Token Tycoon. All rights reserved.</p>
+        <p>&copy; {new Date().getFullYear()} Pika Token. All rights reserved.</p>
       </footer>
     </div>
   );

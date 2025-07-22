@@ -47,7 +47,7 @@ export default function HomeTab() {
     setIsStaking(true);
     const success = await stakeTokens(stakeOrderId);
     if (success) {
-      toast({ title: 'Success', description: 'Your stake is approved and tokens have been added.' });
+      toast({ title: 'Success', description: 'Your stake is approved and Pika Tokens have been added.' });
       setStakeOrderId('');
       setStakeDialogOpen(false);
     } else {
@@ -64,11 +64,11 @@ export default function HomeTab() {
     }
     const success = withdrawTokens(amount);
     if(success) {
-      toast({ title: "Success", description: `${amount.toLocaleString()} tokens withdrawn successfully.` });
+      toast({ title: "Success", description: `${amount.toLocaleString()} Pika Tokens withdrawn successfully.` });
       setWithdrawAmount('');
       setWithdrawDialogOpen(false);
     } else {
-      toast({ title: "Error", description: "Insufficient token balance.", variant: "destructive" });
+      toast({ title: "Error", description: "Insufficient Pika Token balance.", variant: "destructive" });
     }
   };
 
@@ -89,7 +89,7 @@ export default function HomeTab() {
         <Card className="shadow-lg bg-card/80 backdrop-blur-sm">
           <CardHeader>
             <CardTitle className="text-2xl font-headline">Staking Dashboard</CardTitle>
-            <CardDescription>Stake your tokens to earn daily rewards.</CardDescription>
+            <CardDescription>Stake your Pika Tokens to earn daily rewards.</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col items-center gap-6">
             <div className="relative w-48 h-48 sm:w-64 sm:h-64 flex items-center justify-center">
@@ -122,11 +122,11 @@ export default function HomeTab() {
           <CardFooter className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Dialog open={isStakeDialogOpen} onOpenChange={setStakeDialogOpen}>
               <DialogTrigger asChild>
-                <Button className="w-full" size="lg">Stake Tokens</Button>
+                <Button className="w-full" size="lg">Stake Pika Tokens</Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Stake Your Tokens</DialogTitle>
+                  <DialogTitle>Stake Your Pika Tokens</DialogTitle>
                   <DialogDescription>
                     To stake, please send 0.05 USDT to the Binance ID below and enter your order ID to confirm.
                   </DialogDescription>
@@ -155,12 +155,12 @@ export default function HomeTab() {
                 <DialogHeader>
                   <DialogTitle>Test Withdraw</DialogTitle>
                   <DialogDescription>
-                    Convert your tokens to USDT. Rate: 1000 Tokens = 1 USDT.
+                    Convert your Pika Tokens to USDT. Rate: 1000 Pika Tokens = 1 USDT.
                   </DialogDescription>
                 </DialogHeader>
                 <div className="py-4 space-y-4">
                     <div>
-                        <Label htmlFor="withdrawAmount">Token Amount to Withdraw</Label>
+                        <Label htmlFor="withdrawAmount">Pika Token Amount to Withdraw</Label>
                         <Input id="withdrawAmount" type="number" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} placeholder="e.g., 1000" />
                     </div>
                     {withdrawAmount && <p className="font-semibold text-center text-lg">You will receive: <span className="text-primary">{(parseFloat(withdrawAmount) * tokenToUsdtRate).toFixed(2)} USDT</span></p>}

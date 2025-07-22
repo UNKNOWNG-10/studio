@@ -37,13 +37,13 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     try {
-      const storedUser = localStorage.getItem('tokenTycoonUser');
+      const storedUser = localStorage.getItem('pikaTokenUser');
       if (storedUser) {
         setUser(JSON.parse(storedUser));
       }
     } catch (error) {
       console.error("Failed to parse user from localStorage", error);
-      localStorage.removeItem('tokenTycoonUser');
+      localStorage.removeItem('pikaTokenUser');
     } finally {
       setLoading(false);
     }
@@ -64,18 +64,18 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       tasksCompleted: {},
       transactions: [newTransaction],
     };
-    localStorage.setItem('tokenTycoonUser', JSON.stringify(newUser));
+    localStorage.setItem('pikaTokenUser', JSON.stringify(newUser));
     setUser(newUser);
   };
 
   const logout = () => {
-    localStorage.removeItem('tokenTycoonUser');
+    localStorage.removeItem('pikaTokenUser');
     setUser(null);
   };
 
   const updateUserInStateAndStorage = (updatedUser: User) => {
     setUser(updatedUser);
-    localStorage.setItem('tokenTycoonUser', JSON.stringify(updatedUser));
+    localStorage.setItem('pikaTokenUser', JSON.stringify(updatedUser));
   };
 
   const updateTokenBalance = (amount: number) => {

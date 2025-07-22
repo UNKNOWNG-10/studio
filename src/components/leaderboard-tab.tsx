@@ -73,7 +73,7 @@ export default function LeaderboardTab() {
         <Card className="shadow-lg bg-card/80 backdrop-blur-sm">
           <CardHeader>
             <CardTitle className="text-2xl font-headline">Leaderboard</CardTitle>
-            <CardDescription>Top 50 token earners in the Token Tycoon community.</CardDescription>
+            <CardDescription>Top 50 Pika Token earners in the community.</CardDescription>
           </CardHeader>
           <CardContent>
             <Table>
@@ -81,7 +81,7 @@ export default function LeaderboardTab() {
                 <TableRow>
                   <TableHead className="w-[100px]">Rank</TableHead>
                   <TableHead>User UID</TableHead>
-                  <TableHead className="text-right">Tokens</TableHead>
+                  <TableHead className="text-right">Pika Tokens</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

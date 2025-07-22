@@ -29,7 +29,7 @@ export default function TasksTab() {
       <div className="relative z-10">
         <div className="text-center mb-8">
           <h2 className="text-3xl font-bold font-headline">Complete Tasks, Earn Rewards</h2>
-          <p className="text-muted-foreground">Get extra tokens by completing these simple tasks.</p>
+          <p className="text-muted-foreground">Get extra Pika Tokens by completing these simple tasks.</p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {tasks.map((task) => {
@@ -41,7 +41,7 @@ export default function TasksTab() {
                   <div className="bg-secondary p-3 rounded-full">{task.icon}</div>
                   <div>
                     <CardTitle>{task.title}</CardTitle>
-                    <CardDescription>Reward: {task.reward.toLocaleString()} Tokens</CardDescription>
+                    <CardDescription>Reward: {task.reward.toLocaleString()} Pika Tokens</CardDescription>
                   </div>
                 </CardHeader>
                 <CardFooter>

@@ -38,7 +38,7 @@ export default function LoginPage() {
           <div className="mx-auto bg-primary text-primary-foreground rounded-full h-16 w-16 flex items-center justify-center mb-4">
              <Coins className="h-8 w-8" />
           </div>
-          <CardTitle className="text-3xl font-headline">Token Tycoon</CardTitle>
+          <CardTitle className="text-3xl font-headline">Pika Token</CardTitle>
           <CardDescription>Sign in with your Binance UID to start earning.</CardDescription>
         </CardHeader>
         <CardContent>
@@ -65,7 +65,7 @@ export default function LoginPage() {
             onClick={handleLogin}
             disabled={uid.length < 8}
           >
-            Sign In & Claim 1000 Tokens
+            Sign In & Claim 1000 Pika Tokens
           </Button>
         </CardFooter>
       </Card>

@@ -4,8 +4,8 @@ import { UserProvider } from '@/contexts/user-context';
 import { Toaster } from '@/components/ui/toaster';
 
 export const metadata: Metadata = {
-  title: 'Token Tycoon',
-  description: 'Manage your tokens with Token Tycoon',
+  title: 'Pika Token',
+  description: 'Manage your tokens with Pika Token',
 };
 
 export default function RootLayout({

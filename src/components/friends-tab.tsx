@@ -36,7 +36,7 @@ export default function FriendsTab() {
           <CardHeader>
             <CardTitle className="text-2xl font-headline">Invite Your Friends</CardTitle>
             <CardDescription>
-              Share your referral link and earn a <span className="text-primary font-semibold">30% token bonus</span> for every friend that joins and stakes!
+              Share your referral link and earn a <span className="text-primary font-semibold">30% Pika Token bonus</span> for every friend that joins and stakes!
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -56,7 +56,7 @@ export default function FriendsTab() {
                 <ol className="list-decimal list-inside text-left mt-2 max-w-md mx-auto text-muted-foreground space-y-1">
                     <li>Share your unique link with friends.</li>
                     <li>Your friend signs up using your link.</li>
-                    <li>When they make their first stake, you receive 30% of their staked token amount as a bonus!</li>
+                    <li>When they make their first stake, you receive 30% of their staked Pika Token amount as a bonus!</li>
                 </ol>
             </div>
           </CardContent>
