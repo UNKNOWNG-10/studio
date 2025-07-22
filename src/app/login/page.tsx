@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -14,6 +15,17 @@ export default function LoginPage() {
   const [uid, setUid] = useState('');
   const { login, user, loading } = useUser();
   const router = useRouter();
+  const [deviceUid, setDeviceUid] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+        const storedDeviceUid = localStorage.getItem('pikaTokenDeviceUser');
+        setDeviceUid(storedDeviceUid);
+        if (storedDeviceUid) {
+            setUid(storedDeviceUid);
+        }
+    }
+  }, []);
 
   useEffect(() => {
     if (!loading && user) {
@@ -24,7 +36,7 @@ export default function LoginPage() {
   const handleLogin = () => {
     if (uid.length >= 8) {
       login(uid);
-      router.push('/');
+      // The router.push will be handled by the useEffect above
     }
   };
 
@@ -63,7 +75,7 @@ export default function LoginPage() {
                />
             </div>
             <CardTitle className="text-3xl font-headline">Pika Token</CardTitle>
-            <CardDescription>Sign in with your Binance UID to start earning.</CardDescription>
+            <CardDescription>{deviceUid ? "Welcome back! Please sign in." : "Sign in with your Binance UID to start earning."}</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={(e) => { e.preventDefault(); handleLogin(); }}>
@@ -78,6 +90,7 @@ export default function LoginPage() {
                     onChange={(e) => setUid(e.target.value)}
                     minLength={8}
                     required
+                    readOnly={!!deviceUid}
                   />
                 </div>
               </div>
@@ -89,7 +102,7 @@ export default function LoginPage() {
               onClick={handleLogin}
               disabled={uid.length < 8}
             >
-              Sign In & Claim 1000 Pika Tokens
+              {deviceUid ? 'Sign In' : 'Sign In & Claim 1000 Pika Tokens'}
             </Button>
           </CardFooter>
         </Card>
@@ -97,3 +110,5 @@ export default function LoginPage() {
     </div>
   );
 }
+
+    

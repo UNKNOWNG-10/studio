@@ -2,6 +2,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { toast } from '@/hooks/use-toast';
 
 export type Transaction = {
   id: string;
@@ -69,9 +70,15 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     try {
       const storedUser = localStorage.getItem('pikaTokenUser');
-      if (storedUser) {
-        setUser(JSON.parse(storedUser));
+      const deviceUser = localStorage.getItem('pikaTokenDeviceUser');
+
+      if (storedUser && deviceUser) {
+        const parsedUser = JSON.parse(storedUser);
+        if (parsedUser.uid === deviceUser) {
+          setUser(parsedUser);
+        }
       }
+
       const storedTasks = localStorage.getItem('pikaTokenTasks');
       if (storedTasks) {
         setTasks(JSON.parse(storedTasks));
@@ -83,6 +90,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       console.error("Failed to parse from localStorage", error);
       localStorage.removeItem('pikaTokenUser');
       localStorage.removeItem('pikaTokenTasks');
+      localStorage.removeItem('pikaTokenDeviceUser');
     } finally {
       setLoading(false);
     }
@@ -124,6 +132,31 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
 
 
   const login = (uid: string) => {
+    const deviceUser = localStorage.getItem('pikaTokenDeviceUser');
+
+    if (deviceUser && deviceUser !== uid) {
+      toast({
+        title: "Login Error",
+        description: "This device is already associated with another account.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // If deviceUser exists, it means we are logging back in.
+    // We should load the existing user data.
+    if (deviceUser) {
+        const storedUser = localStorage.getItem('pikaTokenUser');
+        if (storedUser) {
+            const parsedUser = JSON.parse(storedUser);
+            if (parsedUser.uid === uid) {
+                setUser(parsedUser);
+                return;
+            }
+        }
+    }
+    
+    // This is a first-time login for this device
     const isAdmin = uid === ADMIN_UID;
     const newTransaction: Transaction = {
       id: `tx_${Date.now()}`,
@@ -143,12 +176,15 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       transactions: [newTransaction],
       lastPayoutTime: new Date().toISOString(),
     };
+    
     localStorage.setItem('pikaTokenUser', JSON.stringify(newUser));
+    localStorage.setItem('pikaTokenDeviceUser', uid); // Bind user to device
     setUser(newUser);
   };
 
   const logout = () => {
-    localStorage.removeItem('pikaTokenUser');
+    // We don't remove pikaTokenUser or pikaTokenDeviceUser from localStorage
+    // to enforce the one-account-per-device rule.
     setUser(null);
   };
   
@@ -327,3 +363,5 @@ export const useUser = () => {
   }
   return context;
 };
+
+    
