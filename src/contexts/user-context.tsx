@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
@@ -57,6 +58,7 @@ const initialTasks: Task[] = [
 const ADMIN_UID = "admin_user_123";
 const HOURLY_EARNING_RATE_FACTOR = (0.03 / 24) * 45; // ~54.16 tokens per hour for 1000 staked
 const MINIMUM_WITHDRAWAL_AMOUNT = 100000;
+const ONE_TIME_TASKS = ['follow_twitter', 'join_telegram', 'first_stake'];
 
 export const UserProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -264,11 +266,13 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
 
     const lastCompleted = user.tasksCompleted[taskId];
     const now = new Date();
-    
-    if (taskId === 'first_stake') {
-      if (user.stakedBalance <= 0 || lastCompleted) return false;
+
+    if (ONE_TIME_TASKS.includes(taskId)) {
+      if (lastCompleted) return false; // Already completed
+      if (taskId === 'first_stake' && user.stakedBalance <= 0) return false; // Condition not met
     } else {
-       const cooldown = taskId === 'watch_ad' ? 5 * 1000 : 60 * 1000;
+       // This handles recurring tasks like 'watch_ad'
+       const cooldown = taskId === 'watch_ad' ? 5 * 1000 : 60 * 1000; // 5s for ads, 1min for others
        if (lastCompleted && now.getTime() - new Date(lastCompleted).getTime() < cooldown) {
          return false;
        }

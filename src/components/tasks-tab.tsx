@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -27,16 +28,20 @@ const getIcon = (iconName?: string) => {
     return <Tag className="h-6 w-6 text-gray-500" />;
 }
 
+const ONE_TIME_TASKS = ['follow_twitter', 'join_telegram', 'first_stake'];
+
 const TaskCard = ({ task }: { task: {id: string, title: string, reward: number, icon?:string} }) => {
   const { user, claimTaskReward } = useUser();
   const [timeLeft, setTimeLeft] = useState(0);
   const [isClaiming, setIsClaiming] = useState(false);
 
   const lastCompleted = user?.tasksCompleted[task.id];
+  const isOneTimeTask = ONE_TIME_TASKS.includes(task.id);
+  
   const cooldown = task.id === 'watch_ad' ? 5 * 1000 : 60 * 1000;
 
   useEffect(() => {
-    if (!lastCompleted) {
+    if (isOneTimeTask || !lastCompleted) {
       setTimeLeft(0);
       return;
     }
@@ -49,7 +54,7 @@ const TaskCard = ({ task }: { task: {id: string, title: string, reward: number, 
     }, 1000);
 
     return () => clearInterval(intervalId);
-  }, [lastCompleted, cooldown, task.id]);
+  }, [lastCompleted, cooldown, task.id, isOneTimeTask]);
   
   const handleClaim = async () => {
     setIsClaiming(true);
@@ -57,7 +62,13 @@ const TaskCard = ({ task }: { task: {id: string, title: string, reward: number, 
     if (success) {
       toast({ title: "Reward Claimed!", description: `You received ${task.reward.toLocaleString()} Pika Tokens.` });
     } else {
-      toast({ title: "Cooldown Active", description: "Please wait for the timer to finish.", variant: "destructive" });
+      let description = "Please wait for the timer to finish.";
+      if (isOneTimeTask) {
+        description = "This task can only be completed once.";
+      } else if (task.id === 'first_stake' && user?.stakedBalance === 0) {
+        description = "You must stake first to claim this reward.";
+      }
+      toast({ title: "Cannot Claim Task", description, variant: "destructive" });
     }
     setIsClaiming(false);
   }
@@ -70,7 +81,25 @@ const TaskCard = ({ task }: { task: {id: string, title: string, reward: number, 
   }
   
   const isCompletedOnce = !!lastCompleted;
-  const isButtonDisabled = timeLeft > 0 || isClaiming;
+  const isButtonDisabled = isClaiming || (isOneTimeTask && isCompletedOnce) || timeLeft > 0;
+  
+  let buttonText = 'Claim Reward';
+  if (isClaiming) {
+    buttonText = ''; // Loader will be shown
+  } else if (isOneTimeTask) {
+    if (isCompletedOnce) {
+      buttonText = 'Completed';
+    } else {
+      buttonText = 'Claim Reward';
+    }
+  } else if (timeLeft > 0) {
+    buttonText = `Next in ${formatTime(timeLeft)}`;
+  } else if (task.id === 'watch_ad') {
+    buttonText = isCompletedOnce ? "Watch Next Ad" : "Watch Ad";
+  } else {
+    buttonText = isCompletedOnce ? 'Claim Again' : 'Claim Reward';
+  }
+
 
   return (
     <Card className="shadow-lg hover:shadow-xl transition-shadow bg-card/80 backdrop-blur-sm flex flex-col justify-between">
@@ -87,14 +116,9 @@ const TaskCard = ({ task }: { task: {id: string, title: string, reward: number, 
           onClick={handleClaim}
           disabled={isButtonDisabled}
         >
-          {isClaiming ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-          {timeLeft > 0 ? (
-            `Next in ${formatTime(timeLeft)}`
-          ) : task.id === 'watch_ad' ? (
-            isCompletedOnce ? "Watch Next Ad" : "Watch Ad"
-          ) : (
-            isCompletedOnce ? 'Claim Again' : 'Claim Reward'
-          )}
+          {isClaiming && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          {isOneTimeTask && isCompletedOnce && <Check className="mr-2 h-4 w-4" />}
+          {buttonText}
         </Button>
       </CardFooter>
     </Card>
