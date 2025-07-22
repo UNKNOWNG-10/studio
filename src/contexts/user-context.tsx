@@ -8,6 +8,7 @@ export type Transaction = {
   amount: number;
   date: string;
   description: string;
+  status: 'pending' | 'approved' | 'completed';
 };
 
 export type Task = {
@@ -40,6 +41,7 @@ interface UserContextType {
   withdrawTokens: (amount: number) => boolean;
   claimTaskReward: (taskId: string, reward: number) => void;
   addTask: (task: Omit<Task, 'id'>) => void;
+  approveTransaction: (transactionId: string) => void;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -98,6 +100,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
             amount: earnings,
             date: now.toISOString(),
             description: `Hourly staking reward for ${hoursToPay} hour(s)`,
+            status: 'completed'
           };
           
           const updatedUser: User = {
@@ -123,6 +126,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       amount: 1000,
       date: new Date().toISOString(),
       description: 'Welcome bonus for signing up',
+      status: 'completed',
     };
     const newUser: User = {
       uid,
@@ -162,26 +166,22 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   const stakeTokens = async (orderId: string): Promise<boolean> => {
     if (!user || user.hasStaked) return false;
     
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
+    // This is now just a pending transaction, admin must approve
     const stakeAmount = 1000;
     
     if (user.tokenBalance < stakeAmount) return false;
 
     const newTransaction: Transaction = {
-      id: `tx_${Date.now()}`,
+      id: `tx_stake_${Date.now()}`,
       type: 'stake',
       amount: stakeAmount,
       date: new Date().toISOString(),
-      description: `Stake confirmed with Order ID: ${orderId}`,
+      description: `Stake request with Order ID: ${orderId}`,
+      status: 'pending'
     };
 
     const updatedUser = {
       ...user,
-      tokenBalance: user.tokenBalance - stakeAmount,
-      stakedBalance: user.stakedBalance + stakeAmount,
-      hasStaked: true,
-      lastPayoutTime: new Date().toISOString(),
       transactions: [newTransaction, ...(user.transactions || [])],
     };
     updateUserInStateAndStorage(updatedUser);
@@ -192,21 +192,61 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     if (!user || user.tokenBalance < amount) return false;
     
     const newTransaction: Transaction = {
-      id: `tx_${Date.now()}`,
+      id: `tx_withdraw_${Date.now()}`,
       type: 'withdraw',
       amount: amount,
       date: new Date().toISOString(),
-      description: 'Test withdrawal',
+      description: 'Test withdrawal request',
+      status: 'pending'
     };
 
     const updatedUser = { 
       ...user, 
-      tokenBalance: user.tokenBalance - amount,
       transactions: [newTransaction, ...(user.transactions || [])],
     };
     updateUserInStateAndStorage(updatedUser);
     return true;
   };
+
+  const approveTransaction = (transactionId: string) => {
+    if (!user || !user.isAdmin) return;
+    
+    // In a real app, you'd fetch all users' data, but here we just manage one user at a time.
+    // This will only work for the currently logged-in user's transactions.
+    // For a multi-user app, this logic would need to be on a server.
+    const tx = user.transactions.find(t => t.id === transactionId);
+    if (!tx || tx.status !== 'pending') return;
+
+    let updatedUser: User = { ...user };
+    
+    if (tx.type === 'stake') {
+        updatedUser = {
+            ...updatedUser,
+            tokenBalance: updatedUser.tokenBalance - tx.amount,
+            stakedBalance: updatedUser.stakedBalance + tx.amount,
+            hasStaked: true,
+            lastPayoutTime: new Date().toISOString()
+        }
+    } else if (tx.type === 'withdraw') {
+        if(updatedUser.tokenBalance < tx.amount) {
+          // This can happen if they requested a withdraw then spent the tokens
+          // before approval. We'll just deny it by not processing.
+          // Or we can add a "denied" status. For now, let's just do nothing.
+          return;
+        }
+        updatedUser = {
+            ...updatedUser,
+            tokenBalance: updatedUser.tokenBalance - tx.amount
+        }
+    }
+    
+    const updatedTransactions = updatedUser.transactions.map(t => 
+      t.id === transactionId ? { ...t, status: 'approved' as const, description: t.description.replace('request', 'approved') } : t
+    );
+
+    updatedUser.transactions = updatedTransactions;
+    updateUserInStateAndStorage(updatedUser);
+  }
 
   const claimTaskReward = (taskId: string, reward: number) => {
     if (!user || user.tasksCompleted[taskId]) return;
@@ -220,6 +260,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       amount: reward,
       date: new Date().toISOString(),
       description: `Reward for task: ${task.title}`,
+      status: 'completed'
     };
 
     const updatedUser = {
@@ -244,7 +285,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <UserContext.Provider value={{ user, loading, isAdmin: user?.isAdmin || false, tasks, login, logout, updateTokenBalance, stakeTokens, withdrawTokens, claimTaskReward, addTask }}>
+    <UserContext.Provider value={{ user, loading, isAdmin: user?.isAdmin || false, tasks, login, logout, updateTokenBalance, stakeTokens, withdrawTokens, claimTaskReward, addTask, approveTransaction }}>
       {children}
     </UserContext.Provider>
   );
