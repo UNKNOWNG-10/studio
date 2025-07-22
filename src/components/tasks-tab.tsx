@@ -1,10 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useUser } from '@/contexts/user-context';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Check, Gift, Twitter, Send, Tv, PlusCircle, Tag, Trophy } from 'lucide-react';
+import { Check, Gift, Twitter, Send, Tv, PlusCircle, Tag, Trophy, Loader2 } from 'lucide-react';
 import Image from 'next/image';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -27,8 +27,83 @@ const getIcon = (iconName?: string) => {
     return <Tag className="h-6 w-6 text-gray-500" />;
 }
 
+const TaskCard = ({ task }: { task: {id: string, title: string, reward: number, icon?:string} }) => {
+  const { user, claimTaskReward } = useUser();
+  const [timeLeft, setTimeLeft] = useState(0);
+  const [isClaiming, setIsClaiming] = useState(false);
+
+  const lastCompleted = user?.tasksCompleted[task.id];
+  const cooldown = task.id === 'watch_ad' ? 5 * 1000 : 60 * 1000;
+
+  useEffect(() => {
+    if (!lastCompleted) {
+      setTimeLeft(0);
+      return;
+    }
+
+    const intervalId = setInterval(() => {
+      const now = new Date().getTime();
+      const nextAvailableTime = new Date(lastCompleted).getTime() + cooldown;
+      const newTimeLeft = Math.max(0, nextAvailableTime - now);
+      setTimeLeft(newTimeLeft);
+    }, 1000);
+
+    return () => clearInterval(intervalId);
+  }, [lastCompleted, cooldown, task.id]);
+  
+  const handleClaim = async () => {
+    setIsClaiming(true);
+    const success = await claimTaskReward(task.id, task.reward);
+    if (success) {
+      toast({ title: "Reward Claimed!", description: `You received ${task.reward.toLocaleString()} Pika Tokens.` });
+    } else {
+      toast({ title: "Cooldown Active", description: "Please wait for the timer to finish.", variant: "destructive" });
+    }
+    setIsClaiming(false);
+  }
+
+  const formatTime = (ms: number) => {
+    const seconds = Math.floor((ms / 1000) % 60);
+    const minutes = Math.floor((ms / 1000 / 60) % 60);
+    if (minutes > 0) return `${minutes}m ${seconds}s`;
+    return `${seconds}s`;
+  }
+  
+  const isCompletedOnce = !!lastCompleted;
+  const isButtonDisabled = timeLeft > 0 || isClaiming;
+
+  return (
+    <Card className="shadow-lg hover:shadow-xl transition-shadow bg-card/80 backdrop-blur-sm flex flex-col justify-between">
+      <CardHeader className="flex flex-row items-center gap-4">
+        <div className="bg-secondary p-3 rounded-full">{getIcon(task.icon)}</div>
+        <div>
+          <CardTitle>{task.title}</CardTitle>
+          <CardDescription>Reward: {task.reward.toLocaleString()} Pika Tokens</CardDescription>
+        </div>
+      </CardHeader>
+      <CardFooter>
+        <Button
+          className="w-full"
+          onClick={handleClaim}
+          disabled={isButtonDisabled}
+        >
+          {isClaiming ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+          {timeLeft > 0 ? (
+            `Next in ${formatTime(timeLeft)}`
+          ) : task.id === 'watch_ad' ? (
+            isCompletedOnce ? "Watch Next Ad" : "Watch Ad"
+          ) : (
+            isCompletedOnce ? 'Claim Again' : 'Claim Reward'
+          )}
+        </Button>
+      </CardFooter>
+    </Card>
+  );
+}
+
+
 export default function TasksTab() {
-  const { user, tasks, claimTaskReward, isAdmin, addTask } = useUser();
+  const { user, tasks, isAdmin, addTask } = useUser();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTaskReward, setNewTaskReward] = useState('');
@@ -115,37 +190,9 @@ export default function TasksTab() {
         )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {tasks.map((task) => {
-            const isCompleted = user?.tasksCompleted[task.id] || (task.id === 'first_stake' && (user?.stakedBalance || 0) > 0);
-
-            return (
-              <Card key={task.id} className="shadow-lg hover:shadow-xl transition-shadow bg-card/80 backdrop-blur-sm">
-                <CardHeader className="flex flex-row items-center gap-4">
-                  <div className="bg-secondary p-3 rounded-full">{getIcon(task.icon)}</div>
-                  <div>
-                    <CardTitle>{task.title}</CardTitle>
-                    <CardDescription>Reward: {task.reward.toLocaleString()} Pika Tokens</CardDescription>
-                  </div>
-                </CardHeader>
-                <CardFooter>
-                  <Button
-                    className="w-full"
-                    onClick={() => claimTaskReward(task.id, task.reward)}
-                    disabled={isCompleted}
-                  >
-                    {isCompleted ? (
-                      <>
-                        <Check className="mr-2 h-4 w-4" />
-                        Completed
-                      </>
-                    ) : (
-                      'Claim Reward'
-                    )}
-                  </Button>
-                </CardFooter>
-              </Card>
-            );
-          })}
+          {tasks.map((task) => (
+             <TaskCard key={task.id} task={task} />
+          ))}
         </div>
       </div>
     </div>

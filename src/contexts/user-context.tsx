@@ -24,7 +24,7 @@ interface User {
   tokenBalance: number;
   stakedBalance: number;
   hasStaked: boolean; // To track if user has staked once
-  tasksCompleted: { [key: string]: boolean };
+  tasksCompleted: { [key: string]: string }; // Store ISO date string for last completion
   transactions: Transaction[];
   lastPayoutTime?: string;
 }
@@ -39,7 +39,7 @@ interface UserContextType {
   updateTokenBalance: (amount: number) => void;
   stakeTokens: (orderId: string) => Promise<boolean>;
   withdrawTokens: (amount: number) => boolean;
-  claimTaskReward: (taskId: string, reward: number) => void;
+  claimTaskReward: (taskId: string, reward: number) => Promise<boolean>;
   addTask: (task: Omit<Task, 'id'>) => void;
   approveTransaction: (transactionId: string) => void;
   rejectTransaction: (transactionId: string) => void;
@@ -259,17 +259,29 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   };
 
 
-  const claimTaskReward = (taskId: string, reward: number) => {
-    if (!user || user.tasksCompleted[taskId]) return;
+  const claimTaskReward = async (taskId: string, reward: number): Promise<boolean> => {
+    if (!user) return false;
+
+    const lastCompleted = user.tasksCompleted[taskId];
+    const now = new Date();
+    
+    if (taskId === 'first_stake') {
+      if (user.stakedBalance <= 0 || lastCompleted) return false;
+    } else {
+       const cooldown = taskId === 'watch_ad' ? 5 * 1000 : 60 * 1000;
+       if (lastCompleted && now.getTime() - new Date(lastCompleted).getTime() < cooldown) {
+         return false;
+       }
+    }
     
     const task = tasks.find(t => t.id === taskId);
-    if (!task) return;
+    if (!task) return false;
 
     const newTransaction: Transaction = {
       id: `tx_${Date.now()}`,
       type: 'task',
       amount: reward,
-      date: new Date().toISOString(),
+      date: now.toISOString(),
       description: `Reward for task: ${task.title}`,
       status: 'completed'
     };
@@ -277,10 +289,11 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     const updatedUser = {
       ...user,
       tokenBalance: user.tokenBalance + reward,
-      tasksCompleted: { ...user.tasksCompleted, [taskId]: true },
+      tasksCompleted: { ...user.tasksCompleted, [taskId]: now.toISOString() },
       transactions: [newTransaction, ...(user.transactions || [])],
     };
     updateUserInStateAndStorage(updatedUser);
+    return true;
   };
 
   const addTask = (task: Omit<Task, 'id'>) => {
@@ -309,5 +322,3 @@ export const useUser = () => {
   }
   return context;
 };
-
-    
