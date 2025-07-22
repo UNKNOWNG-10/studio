@@ -127,22 +127,29 @@ const TaskCard = ({ task }: { task: Task }) => {
       </CardHeader>
       <CardFooter>
         <div className="w-full flex gap-2">
+           {!task.url || (task.url && hasVisitedLink) || (isCompletedOnce) ? (
             <Button
               className="w-full"
-              onClick={handleAction}
-              disabled={isButtonDisabled && !(task.url && !hasVisitedLink && !isCompletedOnce)}
+              onClick={handleClaim}
+              disabled={isButtonDisabled}
             >
               {isClaiming && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {isOneTimeTask && isCompletedOnce && <Check className="mr-2 h-4 w-4" />}
-              {task.url && !hasVisitedLink && !isCompletedOnce ? <ExternalLink className="mr-2 h-4 w-4" /> : null}
               {buttonText}
             </Button>
-            {task.url && hasVisitedLink && !isCompletedOnce && (
-                 <Button className="w-full" onClick={handleClaim} disabled={isClaiming || isCompletedOnce}>
-                    {isClaiming && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Claim Reward
-                 </Button>
-            )}
+           ) : (
+            <>
+                <Button
+                    className="w-full"
+                    onClick={handleAction}
+                    disabled={isCompletedOnce}
+                >
+                    <ExternalLink className="mr-2 h-4 w-4" />
+                    {buttonText}
+                </Button>
+            </>
+           )}
+
         </div>
       </CardFooter>
     </Card>
