@@ -25,7 +25,10 @@ export default function HomeTab() {
   const [isWithdrawDialogOpen, setWithdrawDialogOpen] = useState(false);
   const [nextPayoutTime, setNextPayoutTime] = useState('');
   
-  const allTransactions = isAdmin ? getAllTransactions() : user?.transactions || [];
+  const allTransactionsRaw = isAdmin ? getAllTransactions() : user?.transactions || [];
+  const allTransactions = isAdmin 
+    ? allTransactionsRaw.filter(tx => tx.type === 'stake' || tx.type === 'withdraw' || tx.type === 'task_submission')
+    : allTransactionsRaw;
 
   useEffect(() => {
     if (user && user.stakedBalance > 0) {
@@ -202,7 +205,7 @@ export default function HomeTab() {
         <Card className="shadow-lg bg-card/80 backdrop-blur-sm">
           <CardHeader>
             <CardTitle>Transaction History</CardTitle>
-            <CardDescription>{isAdmin ? 'All user transactions' : 'A record of your recent staking and withdrawal activities.'}</CardDescription>
+            <CardDescription>{isAdmin ? 'All user stake and task approval requests' : 'A record of your recent staking and withdrawal activities.'}</CardDescription>
           </CardHeader>
           <CardContent>
             <Table>
@@ -219,7 +222,7 @@ export default function HomeTab() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {allTransactions?.length ? allTransactions.slice(0, 20).map((tx: any) => {
+                {allTransactions?.length > 0 ? allTransactions.slice(0, 20).map((tx: any) => {
                   const orderId = tx.type === 'stake' ? getOrderId(tx.description) : null;
                   return (
                   <TableRow key={tx.id}>
@@ -241,7 +244,7 @@ export default function HomeTab() {
                         'destructive'
                       } className="capitalize bg-opacity-70">{tx.status}</Badge>
                     </TableCell>
-                    <TableCell className={`text-right font-semibold ${tx.amount > 0 && (tx.type === 'stake' || tx.type === 'withdraw') ? 'text-destructive' : 'text-green-600'}`}>
+                    <TableCell className={`text-right font-semibold ${tx.amount > 0 && (tx.type === 'stake' || tx.type === 'withdraw' || tx.type === 'task_submission') ? 'text-destructive' : 'text-green-600'}`}>
                       {tx.type === 'stake' || tx.type === 'withdraw' ? '-' : '+'}
                       {tx.amount.toLocaleString(undefined, { maximumFractionDigits: 2 })}
                     </TableCell>
@@ -274,5 +277,4 @@ export default function HomeTab() {
       </div>
     </div>
   );
-
-    
+}

@@ -22,6 +22,7 @@ export type Task = {
   reward: number;
   icon?: string;
   url?: string;
+  htmlContent?: string;
   requiresApproval?: boolean;
 };
 
@@ -60,6 +61,8 @@ interface UserContextType {
   claimTaskReward: (taskId: string, submission?: string) => Promise<boolean>;
   claimReferralMilestone: (milestoneId: number) => Promise<boolean>;
   addTask: (task: Omit<Task, 'id' | 'icon'>) => void;
+  editTask: (task: Task) => void;
+  deleteTask: (taskId: string) => void;
   approveTransaction: (transactionId: string, targetUserId: string) => void;
   rejectTransaction: (transactionId: string, targetUserId: string) => void;
   getAllTransactions: () => Transaction[];
@@ -70,9 +73,9 @@ const UserContext = createContext<UserContextType | undefined>(undefined);
 
 const initialTasks: Task[] = [
   { id: 'follow_twitter', title: 'Follow us on X (Twitter)', reward: 500, icon: 'Twitter', url: 'https://x.com/Pika_Token_io' },
-  { id: 'join_telegram', title: 'Join our Telegram Channel', reward: 500, icon: 'Send' },
+  { id: 'join_telegram', title: 'Join our Telegram Channel', reward: 500, icon: 'Send', url: 'https://t.me/pikatoken_io' },
   { id: 'first_stake', title: 'Make your first stake', reward: 1000, icon: 'Gift' },
-  { id: 'watch_ad', title: 'Watch an Ad', reward: 100, icon: 'Tv', requiresApproval: true },
+  { id: 'watch_ad', title: 'Watch an Ad', reward: 100, icon: 'Tv', requiresApproval: true, htmlContent: '<p>This is a sample ad. Watch for 10 seconds!</p>' },
   { id: 'submit_tweet', title: 'Tweet about Pika Token', reward: 1500, icon: 'Twitter', requiresApproval: true },
 ];
 
@@ -191,14 +194,21 @@ const UserProviderContent = ({ children }: { children: ReactNode }) => {
       return newUsers;
     });
   };
+  
+  const updateTasksInStateAndStorage = (updatedTasks: Task[]) => {
+    setTasks(updatedTasks);
+    localStorage.setItem('pikaTokenTasks', JSON.stringify(updatedTasks));
+  }
 
   const login = (uid: string) => {
     const isAdminLogin = uid === ADMIN_UID;
-    const deviceUser = localStorage.getItem('pikaTokenDeviceUser');
     
-    if (deviceUser && deviceUser !== uid && !isAdminLogin) {
-      toast({ title: "Login Error", description: "This device is already associated with another account.", variant: "destructive" });
-      return;
+    if (!isAdminLogin) {
+      const deviceUser = localStorage.getItem('pikaTokenDeviceUser');
+      if (deviceUser && deviceUser !== uid) {
+        toast({ title: "Login Error", description: "This device is already associated with another account.", variant: "destructive" });
+        return;
+      }
     }
     
     if (users[uid]) {
@@ -235,13 +245,9 @@ const UserProviderContent = ({ children }: { children: ReactNode }) => {
 
   const logout = () => {
     setUser(null);
+    localStorage.removeItem('pikaTokenDeviceUser');
   };
   
-  const updateTasksInStateAndStorage = (updatedTasks: Task[]) => {
-    setTasks(updatedTasks);
-    localStorage.setItem('pikaTokenTasks', JSON.stringify(updatedTasks));
-  }
-
   const updateTokenBalance = (amount: number) => {
     if (!user) return;
     const updatedUser = { ...user, tokenBalance: user.tokenBalance + amount };
@@ -485,7 +491,7 @@ const UserProviderContent = ({ children }: { children: ReactNode }) => {
     return true;
   };
 
-  const addTask = (task: Omit<Task, 'id' | 'icon'>) => {
+  const addTask = (task: Omit<Task, 'id' | 'icon' | 'htmlContent'>) => {
     if(!user || !user.isAdmin) return;
 
     const newTask: Task = {
@@ -498,6 +504,18 @@ const UserProviderContent = ({ children }: { children: ReactNode }) => {
     updateTasksInStateAndStorage(updatedTasks);
   };
   
+  const editTask = (updatedTask: Task) => {
+    if (!user || !user.isAdmin) return;
+    const updatedTasks = tasks.map(task => (task.id === updatedTask.id ? updatedTask : task));
+    updateTasksInStateAndStorage(updatedTasks);
+  };
+
+  const deleteTask = (taskId: string) => {
+    if (!user || !user.isAdmin) return;
+    const updatedTasks = tasks.filter(task => task.id !== taskId);
+    updateTasksInStateAndStorage(updatedTasks);
+  };
+
   const getAllTransactions = (): Transaction[] => {
     return Object.values(users)
       .flatMap(u => u.transactions.map(t => ({...t, uid: u.uid})))
@@ -509,7 +527,7 @@ const UserProviderContent = ({ children }: { children: ReactNode }) => {
   }
 
   return (
-    <UserContext.Provider value={{ user, loading, isAdmin: user?.isAdmin || false, tasks, referralMilestones, login, logout, updateTokenBalance, stakeTokens, withdrawTokens, claimTaskReward, claimReferralMilestone, addTask, approveTransaction, rejectTransaction, getAllTransactions, getAllUsers }}>
+    <UserContext.Provider value={{ user, loading, isAdmin: user?.isAdmin || false, tasks, referralMilestones, login, logout, updateTokenBalance, stakeTokens, withdrawTokens, claimTaskReward, claimReferralMilestone, addTask, editTask, deleteTask, approveTransaction, rejectTransaction, getAllTransactions, getAllUsers }}>
       {children}
     </UserContext.Provider>
   );
@@ -526,5 +544,3 @@ export const useUser = () => {
   }
   return context;
 };
-
-    

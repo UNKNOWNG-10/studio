@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { useUser, Task } from '@/contexts/user-context';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Check, Gift, Twitter, Send, Tv, PlusCircle, Tag, Trophy, Loader2, ExternalLink } from 'lucide-react';
+import { Check, Gift, Twitter, Send, Tv, PlusCircle, Tag, Trophy, Loader2, ExternalLink, Trash2, Edit } from 'lucide-react';
 import Image from 'next/image';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -13,6 +13,8 @@ import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+
 
 const iconMap: { [key: string]: React.ReactNode } = {
   Twitter: <Twitter className="h-6 w-6 text-sky-500" />,
@@ -33,11 +35,20 @@ const getIcon = (iconName?: string) => {
 const ONE_TIME_TASKS = ['follow_twitter', 'join_telegram', 'first_stake', 'submit_tweet'];
 
 const TaskCard = ({ task }: { task: Task }) => {
-  const { user, claimTaskReward } = useUser();
+  const { user, claimTaskReward, isAdmin, deleteTask, editTask } = useUser();
   const [timeLeft, setTimeLeft] = useState(0);
   const [isClaiming, setIsClaiming] = useState(false);
   const [submission, setSubmission] = useState('');
   const [isSubmitDialogOpen, setIsSubmitDialogOpen] = useState(false);
+  const [isAdViewerOpen, setIsAdViewerOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+
+  // Edit states
+  const [editedTitle, setEditedTitle] = useState(task.title);
+  const [editedReward, setEditedReward] = useState(task.reward.toString());
+  const [editedUrl, setEditedUrl] = useState(task.url || '');
+  const [editedHtml, setEditedHtml] = useState(task.htmlContent || '');
+
   const [hasVisitedLink, setHasVisitedLink] = useState(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem(`visited_${task.id}`) === 'true';
@@ -99,15 +110,17 @@ const TaskCard = ({ task }: { task: Task }) => {
     if (success) {
         setIsSubmitDialogOpen(false);
         setSubmission('');
+        if (isAdViewerOpen) setIsAdViewerOpen(false);
     } else {
        toast({ title: "Submission Failed", description: "You may have already submitted this task.", variant: "destructive" });
     }
     setIsClaiming(false);
   }
 
-
   const handleAction = () => {
-    if (task.url) {
+    if (task.id === 'watch_ad' && !isAdmin) {
+      setIsAdViewerOpen(true);
+    } else if (task.url) {
       window.open(task.url, '_blank');
       localStorage.setItem(`visited_${task.id}`, 'true');
       setHasVisitedLink(true);
@@ -116,6 +129,24 @@ const TaskCard = ({ task }: { task: Task }) => {
     } else {
       handleClaim();
     }
+  }
+
+  const handleEditSave = () => {
+    const reward = parseInt(editedReward, 10);
+    if (!editedTitle || isNaN(reward) || reward <= 0) {
+      toast({ title: 'Invalid Input', description: 'Please provide a valid title and a positive reward amount.', variant: 'destructive' });
+      return;
+    }
+    const updatedTask: Task = { 
+      ...task,
+      title: editedTitle,
+      reward,
+      url: editedUrl,
+      htmlContent: editedHtml,
+    };
+    editTask(updatedTask);
+    toast({ title: 'Task Updated', description: 'Task has been successfully updated.' });
+    setIsEditDialogOpen(false);
   }
 
   const formatTime = (ms: number) => {
@@ -133,8 +164,8 @@ const TaskCard = ({ task }: { task: Task }) => {
     buttonText = 'Pending Approval';
     isButtonDisabled = true;
   } else if (task.requiresApproval) {
-    buttonText = 'Submit for Approval';
-    isButtonDisabled = isClaiming || isCompletedOnce;
+     buttonText = task.id === 'watch_ad' ? 'Start Task' : 'Submit for Approval';
+     isButtonDisabled = isClaiming || isCompletedOnce;
   } else if (task.url && !hasVisitedLink && !isCompletedOnce) {
     buttonText = 'Go to Link';
     isButtonDisabled = false;
@@ -153,6 +184,8 @@ const TaskCard = ({ task }: { task: Task }) => {
   } else {
     buttonText = isCompletedOnce ? 'Claim Again' : 'Claim Reward';
   }
+  
+  const canEdit = isAdmin && ['follow_twitter', 'join_telegram', 'watch_ad'].includes(task.id);
 
   return (
     <>
@@ -163,10 +196,38 @@ const TaskCard = ({ task }: { task: Task }) => {
           <CardTitle>{task.title}</CardTitle>
           <CardDescription>Reward: {task.reward.toLocaleString()} Pika Tokens</CardDescription>
         </div>
+        {isAdmin && (
+          <div className="ml-auto flex gap-2">
+            {canEdit && (
+              <Button variant="ghost" size="icon" onClick={() => setIsEditDialogOpen(true)}>
+                <Edit className="h-4 w-4" />
+              </Button>
+            )}
+             <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" size="icon">
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This action cannot be undone. This will permanently delete the task.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => deleteTask(task.id)}>Delete</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+             </AlertDialog>
+          </div>
+        )}
       </CardHeader>
       <CardFooter>
         <div className="w-full flex gap-2">
-           {!task.url || (task.url && hasVisitedLink) || (isCompletedOnce) ? (
+           {!task.url || (task.url && hasVisitedLink) || (isCompletedOnce) || task.id === 'watch_ad' ? (
             <Button
               className="w-full"
               onClick={handleAction}
@@ -192,7 +253,8 @@ const TaskCard = ({ task }: { task: Task }) => {
         </div>
       </CardFooter>
     </Card>
-    {task.requiresApproval && (
+
+    {/* User submission dialog */}
     <Dialog open={isSubmitDialogOpen} onOpenChange={setIsSubmitDialogOpen}>
         <DialogContent>
         <DialogHeader>
@@ -220,6 +282,62 @@ const TaskCard = ({ task }: { task: Task }) => {
         </DialogFooter>
         </DialogContent>
     </Dialog>
+
+    {/* Ad Viewer Dialog */}
+    <Dialog open={isAdViewerOpen} onOpenChange={setIsAdViewerOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Task: {task.title}</DialogTitle>
+            <DialogDescription>
+              Complete the action below to submit this task for approval.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+              <div className="p-4 border rounded-lg min-h-[200px]" dangerouslySetInnerHTML={{ __html: task.htmlContent || '' }} />
+          </div>
+          <DialogFooter>
+              <Button onClick={() => { setSubmission('Ad watched'); handleSubmitForApproval(); }} disabled={isClaiming}>
+                  {isClaiming && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  I've completed this
+              </Button>
+          </DialogFooter>
+        </DialogContent>
+    </Dialog>
+    
+    {/* Admin Edit Dialog */}
+    {canEdit && (
+       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent>
+        <DialogHeader>
+            <DialogTitle>Edit Task: {task.title}</DialogTitle>
+        </DialogHeader>
+        <div className="py-4 space-y-4">
+            <div>
+              <Label htmlFor="editTaskTitle">Task Title</Label>
+              <Input id="editTaskTitle" value={editedTitle} onChange={(e) => setEditedTitle(e.target.value)} />
+            </div>
+             <div>
+              <Label htmlFor="editTaskReward">Reward</Label>
+              <Input id="editTaskReward" type="number" value={editedReward} onChange={(e) => setEditedReward(e.target.value)} />
+            </div>
+            {task.id === 'follow_twitter' || task.id === 'join_telegram' ? (
+              <div>
+                <Label htmlFor="editTaskUrl">URL</Label>
+                <Input id="editTaskUrl" value={editedUrl} onChange={(e) => setEditedUrl(e.target.value)} />
+              </div>
+            ) : null}
+            {task.id === 'watch_ad' ? (
+               <div>
+                <Label htmlFor="editTaskHtml">Ad HTML Code</Label>
+                <Textarea id="editTaskHtml" value={editedHtml} onChange={(e) => setEditedHtml(e.target.value)} rows={10} />
+              </div>
+            ) : null}
+        </div>
+        <DialogFooter>
+            <Button onClick={handleEditSave}>Save Changes</Button>
+        </DialogFooter>
+        </DialogContent>
+    </Dialog>
     )}
     </>
   );
@@ -227,7 +345,7 @@ const TaskCard = ({ task }: { task: Task }) => {
 
 
 export default function TasksTab() {
-  const { user, tasks, isAdmin, addTask } = useUser();
+  const { isAdmin, tasks, addTask } = useUser();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTaskReward, setNewTaskReward] = useState('');
