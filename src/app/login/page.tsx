@@ -13,7 +13,7 @@ import Image from 'next/image';
 
 export default function LoginPage() {
   const [uid, setUid] = useState('');
-  const { login, user, loading } = useUser();
+  const { login, user, loading, loginIconUrl, loginBgUrl } = useUser();
   const router = useRouter();
   const searchParams = useSearchParams();
   const referrerId = searchParams.get('ref');
@@ -37,12 +37,13 @@ export default function LoginPage() {
   return (
     <div className="relative min-h-screen w-full flex items-center justify-center p-4">
       <Image
-        src="https://placehold.co/1920x1080.png"
+        src={loginBgUrl || "https://placehold.co/1920x1080.png"}
         alt="Pikachu background"
         layout="fill"
         objectFit="cover"
         className="absolute inset-0 z-0"
         data-ai-hint="pikachu thunder"
+        key={loginBgUrl} // Add key to force re-render on change
       />
        <div className="absolute inset-0 bg-black/30 backdrop-blur-sm"></div>
 
@@ -51,12 +52,13 @@ export default function LoginPage() {
           <CardHeader className="text-center">
             <div className="mx-auto rounded-full h-24 w-24 flex items-center justify-center mb-4 overflow-hidden bg-yellow-300 border-4 border-yellow-400">
                <Image 
-                  src="https://placehold.co/256x256.png"
+                  src={loginIconUrl || "https://placehold.co/256x256.png"}
                   width={100}
                   height={100}
                   alt="Pika Token"
                   className="object-contain"
                   data-ai-hint="cute token mascot"
+                  key={loginIconUrl} // Add key to force re-render on change
                />
             </div>
             <CardTitle className="text-3xl font-headline">Pika Token</CardTitle>

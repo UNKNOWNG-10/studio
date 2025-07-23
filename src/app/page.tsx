@@ -1,12 +1,12 @@
 
 'use client';
 
-import React, { useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@/contexts/user-context';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Home, Trophy, Users, CheckCircle, Wallet, LogOut, Shield } from 'lucide-react';
+import { Home, Trophy, Users, CheckCircle, Wallet, LogOut, Settings, Image as ImageIcon, Wallpaper } from 'lucide-react';
 import HomeTab from '@/components/home-tab';
 import LeaderboardTab from '@/components/leaderboard-tab';
 import FriendsTab from '@/components/friends-tab';
@@ -14,6 +14,55 @@ import TasksTab from '@/components/tasks-tab';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { toast } from '@/hooks/use-toast';
+
+function AdminSettings() {
+  const { loginIconUrl, loginBgUrl, updateLoginIconUrl, updateLoginBgUrl } = useUser();
+  const [iconUrl, setIconUrl] = useState('');
+  const [bgUrl, setBgUrl] = useState('');
+
+  useEffect(() => {
+    setIconUrl(loginIconUrl);
+    setBgUrl(loginBgUrl);
+  }, [loginIconUrl, loginBgUrl]);
+
+  const handleIconSave = () => {
+    updateLoginIconUrl(iconUrl);
+    toast({ title: 'Icon URL updated!' });
+  };
+  
+  const handleBgSave = () => {
+    updateLoginBgUrl(bgUrl);
+    toast({ title: 'Background URL updated!' });
+  };
+
+  return (
+    <Card className="mt-8">
+      <CardHeader>
+        <CardTitle className="flex items-center"><Settings className="mr-2" /> Admin Settings</CardTitle>
+        <CardDescription>Customize the appearance of the login page.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="space-y-2">
+          <Label htmlFor="iconUrl" className="flex items-center"><ImageIcon className="mr-2 h-4 w-4" /> Login Page Icon URL</Label>
+          <div className="flex items-center gap-2">
+            <Input id="iconUrl" value={iconUrl} onChange={(e) => setIconUrl(e.target.value)} placeholder="https://example.com/icon.png" />
+            <Button onClick={handleIconSave}>Save</Button>
+          </div>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="bgUrl" className="flex items-center"><Wallpaper className="mr-2 h-4 w-4" /> Login Page Background URL</Label>
+           <div className="flex items-center gap-2">
+            <Input id="bgUrl" value={bgUrl} onChange={(e) => setBgUrl(e.target.value)} placeholder="https://example.com/background.jpg" />
+            <Button onClick={handleBgSave}>Save</Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
 
 export default function DashboardPage() {
   const { user, loading, logout, getAllUsers } = useUser();
@@ -79,6 +128,7 @@ export default function DashboardPage() {
             <TasksTab />
           </TabsContent>
         </Tabs>
+        {user.isAdmin && <AdminSettings />}
       </main>
       <footer className="w-full bg-slate-900/80 text-white mt-8 py-6">
         <div className="container mx-auto px-4">

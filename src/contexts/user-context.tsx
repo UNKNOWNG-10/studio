@@ -53,6 +53,8 @@ interface UserContextType {
   isAdmin: boolean;
   tasks: Task[];
   referralMilestones: ReferralMilestone[];
+  loginIconUrl: string;
+  loginBgUrl: string;
   login: (uid: string) => void;
   logout: () => void;
   updateTokenBalance: (amount: number) => void;
@@ -67,6 +69,8 @@ interface UserContextType {
   rejectTransaction: (transactionId: string, targetUserId: string) => void;
   getAllTransactions: () => Transaction[];
   getAllUsers: () => { [key: string]: User };
+  updateLoginIconUrl: (url: string) => void;
+  updateLoginBgUrl: (url: string) => void;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -102,6 +106,8 @@ const UserProviderContent = ({ children }: { children: ReactNode }) => {
   const [users, setUsers] = useState<{ [key: string]: User }>({});
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loginIconUrl, setLoginIconUrl] = useState('');
+  const [loginBgUrl, setLoginBgUrl] = useState('');
 
   const searchParams = useSearchParams();
   const ref = searchParams.get('ref');
@@ -128,11 +134,20 @@ const UserProviderContent = ({ children }: { children: ReactNode }) => {
         setTasks(initialTasks);
         localStorage.setItem('pikaTokenTasks', JSON.stringify(initialTasks));
       }
+
+      const storedIconUrl = localStorage.getItem('pikaLoginIconUrl');
+      if (storedIconUrl) setLoginIconUrl(storedIconUrl);
+      
+      const storedBgUrl = localStorage.getItem('pikaLoginBgUrl');
+      if (storedBgUrl) setLoginBgUrl(storedBgUrl);
+
     } catch (error) {
       console.error("Failed to parse from localStorage", error);
       localStorage.removeItem('pikaTokenUsers');
       localStorage.removeItem('pikaTokenTasks');
       localStorage.removeItem('pikaTokenDeviceUser');
+      localStorage.removeItem('pikaLoginIconUrl');
+      localStorage.removeItem('pikaLoginBgUrl');
     } finally {
       setLoading(false);
     }
@@ -529,9 +544,21 @@ const UserProviderContent = ({ children }: { children: ReactNode }) => {
   const getAllUsers = (): { [key: string]: User } => {
     return users;
   }
+  
+  const updateLoginIconUrl = (url: string) => {
+    if (!user || !user.isAdmin) return;
+    setLoginIconUrl(url);
+    localStorage.setItem('pikaLoginIconUrl', url);
+  }
+
+  const updateLoginBgUrl = (url: string) => {
+    if (!user || !user.isAdmin) return;
+    setLoginBgUrl(url);
+    localStorage.setItem('pikaLoginBgUrl', url);
+  }
 
   return (
-    <UserContext.Provider value={{ user, loading, isAdmin: user?.isAdmin || false, tasks, referralMilestones, login, logout, updateTokenBalance, stakeTokens, withdrawTokens, claimTaskReward, claimReferralMilestone, addTask, editTask, deleteTask, approveTransaction, rejectTransaction, getAllTransactions, getAllUsers }}>
+    <UserContext.Provider value={{ user, loading, isAdmin: user?.isAdmin || false, tasks, referralMilestones, login, logout, updateTokenBalance, stakeTokens, withdrawTokens, claimTaskReward, claimReferralMilestone, addTask, editTask, deleteTask, approveTransaction, rejectTransaction, getAllTransactions, getAllUsers, loginIconUrl, loginBgUrl, updateLoginIconUrl, updateLoginBgUrl }}>
       {children}
     </UserContext.Provider>
   );
