@@ -16,7 +16,7 @@ import { format } from 'date-fns';
 import Image from 'next/image';
 
 export default function HomeTab() {
-  const { user, stakeTokens, withdrawTokens, approveTransaction, rejectTransaction, isAdmin, getAllTransactions } = useUser();
+  const { user, stakeTokens, approveTransaction, rejectTransaction, isAdmin, getAllTransactions } = useUser();
   
   const [stakeOrderId, setStakeOrderId] = useState('');
   const [isStaking, setIsStaking] = useState(false);
@@ -69,30 +69,6 @@ export default function HomeTab() {
       toast({ title: 'Error', description: 'Staking request failed. You may have already staked or have insufficient balance.', variant: 'destructive' });
     }
     setIsStaking(false);
-  };
-
-  const handleWithdraw = () => {
-    const amount = parseFloat(withdrawAmount);
-    if (isNaN(amount) || amount <= 0) {
-      toast({ title: "Error", description: "Please enter a valid amount.", variant: "destructive" });
-      return;
-    }
-    if (amount < 100000) {
-      toast({ title: "Error", description: "Minimum withdrawal amount is 100,000 Pika Tokens.", variant: "destructive" });
-      return;
-    }
-    if (user && user.tokenBalance < amount) {
-        toast({ title: "Error", description: "Insufficient Pika Token balance.", variant: "destructive" });
-        return;
-    }
-    const success = withdrawTokens(amount);
-    if(success) {
-      toast({ title: "Request Sent", description: `Withdrawal request for ${amount.toLocaleString()} Pika Tokens is pending admin approval. The amount has been deducted from your balance.` });
-      setWithdrawAmount('');
-      setWithdrawDialogOpen(false);
-    } else {
-      toast({ title: "Error", description: "Withdrawal request failed. Please check your balance and the minimum withdrawal amount.", variant: "destructive" });
-    }
   };
   
   const handleApprove = (txId: string, uid: string) => {
@@ -203,7 +179,7 @@ export default function HomeTab() {
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Withdraw Pika Tokens</DialogTitle>
+                  <DialogTitle>Withdraw Pika Tokens (Coming Soon)</DialogTitle>
                   <DialogDescription>
                     Convert your Pika Tokens to USDT. Rate: 10,000 Pika Tokens = 1 USDT. Minimum withdrawal is 100,000 tokens. Your withdrawal will be processed after admin approval.
                   </DialogDescription>
@@ -216,7 +192,7 @@ export default function HomeTab() {
                     {withdrawAmount && <p className="font-semibold text-center text-lg">You will receive: <span className="text-primary">{(parseFloat(withdrawAmount || '0') * tokenToUsdtRate).toFixed(4)} USDT</span></p>}
                 </div>
                 <DialogFooter>
-                    <Button onClick={handleWithdraw}>Request Withdraw</Button>
+                    <Button disabled>Request Withdraw</Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>

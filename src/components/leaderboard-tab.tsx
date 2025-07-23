@@ -22,11 +22,12 @@ export default function LeaderboardTab() {
     if (!allUsers) return [];
 
     const sortedUsers = Object.values(allUsers)
+      .filter(u => !u.isAdmin)
       .sort((a, b) => b.tokenBalance - a.tokenBalance);
 
     const rankedUsers: LeaderboardUser[] = sortedUsers.map((u, index) => ({
       rank: index + 1,
-      uid: u.uid.startsWith('admin') ? 'Pika Admin' : `*******${u.uid.slice(-4)}`,
+      uid: `*******${u.uid.slice(-4)}`,
       tokens: u.tokenBalance,
       isCurrentUser: user?.uid === u.uid,
     }));
