@@ -108,8 +108,13 @@ export default function HomeTab() {
   const hourlyEarning = (user?.stakedBalance || 0) * (0.03 / 24) * 45; 
   const tokenToUsdtRate = 0.0001;
 
+  const getOrderId = (description: string) => {
+    const match = description.match(/Order ID: (.*)/);
+    return match ? match[1] : null;
+  };
+
   return (
-    <div className="relative w-full max-w-3xl mx-auto mt-6 space-y-8">
+    <div className="relative w-full max-w-4xl mx-auto mt-6 space-y-8">
        <Image
           src="https://placehold.co/1200x800.png"
           alt="Home background"
@@ -230,6 +235,7 @@ export default function HomeTab() {
                   {isAdmin && <TableHead>User ID</TableHead>}
                   <TableHead>Type</TableHead>
                   <TableHead>Description</TableHead>
+                  {isAdmin && <TableHead>Order ID</TableHead>}
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Amount</TableHead>
                   <TableHead className="text-right">Date</TableHead>
@@ -237,7 +243,9 @@ export default function HomeTab() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {allTransactions?.length ? allTransactions.slice(0, 20).map((tx: any) => (
+                {allTransactions?.length ? allTransactions.slice(0, 20).map((tx: any) => {
+                  const orderId = tx.type === 'stake' ? getOrderId(tx.description) : null;
+                  return (
                   <TableRow key={tx.id}>
                     {isAdmin && <TableCell className="font-mono text-xs">{tx.uid}</TableCell>}
                     <TableCell>
@@ -248,7 +256,8 @@ export default function HomeTab() {
                         'default'
                       } className="capitalize">{tx.type.replace('_', ' ')}</Badge>
                     </TableCell>
-                    <TableCell className="text-muted-foreground">{tx.description}</TableCell>
+                    <TableCell className="text-muted-foreground max-w-[200px] truncate">{tx.description}</TableCell>
+                    {isAdmin && <TableCell className="font-mono text-xs">{orderId}</TableCell>}
                     <TableCell>
                       <Badge variant={
                         tx.status === 'approved' || tx.status === 'completed' ? 'default' : 
@@ -276,9 +285,10 @@ export default function HomeTab() {
                         </TableCell>
                      )}
                   </TableRow>
-                )) : (
+                  );
+                }) : (
                   <TableRow>
-                    <TableCell colSpan={isAdmin ? 7: 5} className="text-center">No transactions yet.</TableCell>
+                    <TableCell colSpan={isAdmin ? 8 : 5} className="text-center">No transactions yet.</TableCell>
                   </TableRow>
                 )}
               </TableBody>
@@ -288,4 +298,5 @@ export default function HomeTab() {
       </div>
     </div>
   );
-}
+
+    
