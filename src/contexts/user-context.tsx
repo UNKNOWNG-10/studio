@@ -80,15 +80,16 @@ const initialTasks: Task[] = [
 ];
 
 const referralMilestones: ReferralMilestone[] = [
-    { id: 1, requiredRefs: 1, reward: 200, title: '1 Referral' },
-    { id: 2, requiredRefs: 5, reward: 700, title: '5 Referrals' },
-    { id: 3, requiredRefs: 10, reward: 1400, title: '10 Referrals' },
-    { id: 4, requiredRefs: 25, reward: 3000, title: '25 Referrals' },
-    { id: 5, requiredRefs: 50, reward: 5500, title: '50 Referrals' },
-    { id: 6, requiredRefs: 100, reward: 14000, title: '100 Referrals' },
-    { id: 7, requiredRefs: 250, reward: 35000, title: '250 Referrals' },
-    { id: 8, requiredRefs: 500, reward: 75000, title: '500 Referrals' },
-    { id: 9, requiredRefs: 1000, reward: 180000, title: '1000 Referrals' },
+    { id: 1, requiredRefs: 1, reward: 300, title: '1 Referral' },
+    { id: 2, requiredRefs: 5, reward: 1500, title: '5 Referrals' },
+    { id: 3, requiredRefs: 25, reward: 7500, title: '25 Referrals' },
+    { id: 4, requiredRefs: 50, reward: 15000, title: '50 Referrals' },
+    { id: 5, requiredRefs: 100, reward: 30000, title: '100 Referrals' },
+    { id: 6, requiredRefs: 250, reward: 75000, title: '250 Referrals' },
+    { id: 7, requiredRefs: 500, reward: 150000, title: '500 Referrals' },
+    { id: 8, requiredRefs: 1000, reward: 300000, title: '1000 Referrals' },
+    { id: 9, requiredRefs: 1500, reward: 450000, title: '1500 Referrals' },
+    { id: 10, requiredRefs: 2000, reward: 600000, title: '2000 Referrals' },
 ];
 
 const ADMIN_UID = "admin_user_123";
