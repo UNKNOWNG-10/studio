@@ -51,18 +51,9 @@ export default function LeaderboardTab() {
   }, [allUsers, user]);
 
   return (
-    <div className="relative w-full max-w-4xl mx-auto mt-6 p-4 rounded-lg">
-      <Image
-        src="https://placehold.co/1920x1080.png"
-        alt="Pikachu background"
-        layout="fill"
-        objectFit="cover"
-        className="absolute inset-0 z-0 rounded-lg"
-        data-ai-hint="pikachu thunder"
-      />
-      <div className="absolute inset-0 bg-black/30 backdrop-blur-sm z-0 rounded-lg"></div>
-      <div className="relative z-10">
-        <Card className="shadow-lg bg-card/80 backdrop-blur-sm">
+    <div className="w-full max-w-4xl mx-auto mt-6">
+      <div>
+        <Card className="shadow-lg">
           <CardHeader>
             <CardTitle className="text-2xl font-headline">Leaderboard</CardTitle>
             <CardDescription>Top 50 Pika Token earners in the community.</CardDescription>
@@ -81,7 +72,7 @@ export default function LeaderboardTab() {
                   <TableRow key={player.rank} className={player.isCurrentUser ? 'bg-primary/20 hover:bg-primary/30' : ''}>
                     <TableCell className="font-medium text-lg">{player.rank}</TableCell>
                     <TableCell>{player.uid}</TableCell>
-                    <TableCell className="text-right font-semibold text-primary">{Math.floor(player.tokens).toLocaleString()}</TableCell>
+                    <TableCell className="text-right font-semibold text-foreground">{Math.floor(player.tokens).toLocaleString()}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

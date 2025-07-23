@@ -93,18 +93,9 @@ export default function HomeTab() {
   };
 
   return (
-    <div className="relative w-full max-w-4xl mx-auto mt-6 space-y-8 p-4 rounded-lg">
-       <Image
-          src="https://placehold.co/1920x1080.png"
-          alt="Pikachu background"
-          layout="fill"
-          objectFit="cover"
-          className="absolute inset-0 z-0 rounded-lg"
-          data-ai-hint="pikachu thunder"
-        />
-      <div className="absolute inset-0 bg-black/30 backdrop-blur-sm z-0 rounded-lg"></div>
-      <div className="relative z-10 space-y-8">
-        <Card className="shadow-lg bg-card/80 backdrop-blur-sm">
+    <div className="w-full max-w-4xl mx-auto mt-6 space-y-8">
+      <div className="space-y-8">
+        <Card className="shadow-lg">
           <CardHeader>
             <CardTitle className="text-2xl font-headline">Staking Dashboard</CardTitle>
             <CardDescription>Stake your Pika Tokens to earn hourly rewards.</CardDescription>
@@ -128,7 +119,7 @@ export default function HomeTab() {
               </svg>
               <div className="text-center">
                 <p className="text-sm text-muted-foreground">Staked Balance</p>
-                <p className="text-3xl sm:text-4xl font-bold text-primary">
+                <p className="text-3xl sm:text-4xl font-bold text-foreground">
                   {(user?.stakedBalance || 0).toLocaleString()}
                 </p>
                 <p className="text-xs text-green-500 font-semibold">
@@ -203,7 +194,7 @@ export default function HomeTab() {
           </CardFooter>
         </Card>
 
-        <Card className="shadow-lg bg-card/80 backdrop-blur-sm">
+        <Card className="shadow-lg">
           <CardHeader>
             <CardTitle>Transaction History</CardTitle>
             <CardDescription>{isAdmin ? 'All user stake and task approval requests' : 'A record of your recent staking and withdrawal activities.'}</CardDescription>

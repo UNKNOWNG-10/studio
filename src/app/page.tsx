@@ -81,7 +81,7 @@ export default function DashboardPage() {
       </main>
       <footer className="w-full bg-slate-900/80 text-white mt-8 py-6">
         <div className="container mx-auto px-4">
-           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center text-sm mb-4">
+           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-center text-sm mb-4">
               <div className="flex items-center justify-center gap-2">
                  <Users className="text-cyan-400" />
                  <span>Online: <span className="font-bold text-yellow-400">{onlineUsers}</span></span>
@@ -89,10 +89,6 @@ export default function DashboardPage() {
               <div className="flex items-center justify-center gap-2">
                  <Shield className="text-cyan-400" />
                  <span>Trusted by <span className="font-bold">10,000+</span> users</span>
-              </div>
-               <div className="flex items-center justify-center gap-2">
-                 <Wallet className="text-cyan-400" />
-                 <span>Over <span className="font-bold">0.5 BTC</span> paid out</span>
               </div>
            </div>
            <div className="flex justify-center items-center gap-4 flex-wrap text-cyan-400 text-sm">
