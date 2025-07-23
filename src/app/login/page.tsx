@@ -34,7 +34,7 @@ function LoginPageContent() {
   }, [user, loading, router]);
   
   const handleLogin = () => {
-    if (uid.length >= 8) {
+    if (uid) {
       login(uid);
     }
   };
@@ -83,13 +83,11 @@ function LoginPageContent() {
                   <Label htmlFor="uid">Binance UID</Label>
                   <Input 
                     id="uid" 
-                    placeholder="Enter your 8-digit UID" 
-                    type="number"
+                    placeholder="Enter your UID" 
+                    type="text"
                     value={uid}
                     onChange={(e) => setUid(e.target.value)}
-                    minLength={8}
                     required
-                    readOnly={!!deviceUid}
                   />
                 </div>
               </div>
@@ -99,7 +97,7 @@ function LoginPageContent() {
             <Button 
               className="w-full" 
               onClick={handleLogin}
-              disabled={uid.length < 8}
+              disabled={!uid}
             >
               {deviceUid ? 'Sign In' : 'Sign In & Claim 1000 Pika Tokens'}
             </Button>
