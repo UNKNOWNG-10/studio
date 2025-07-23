@@ -34,7 +34,7 @@ export default function HomeTab() {
     if (user && user.stakedBalance > 0) {
       const payoutInterval = setInterval(() => {
         const lastPayout = new Date(user.lastPayoutTime || Date.now());
-        const nextPayout = new Date(lastPayout.getTime() + 60 * 60 * 1000);
+        const nextPayout = new Date(lastPayout.getTime() + 5 * 60 * 1000);
         const now = new Date();
         const diff = nextPayout.getTime() - now.getTime();
 
@@ -84,7 +84,7 @@ export default function HomeTab() {
     toast({ title: 'Success', description: 'Transaction rejected.'});
   }
 
-  const hourlyEarning = (user?.stakedBalance || 0) * (0.03 / 24) * 45; 
+  const hourlyEarning = (56.66 * 12); // 56.66 tokens every 5 mins * 12 (to get per hour)
   const tokenToUsdtRate = 0.0001;
 
   const getOrderId = (description: string) => {

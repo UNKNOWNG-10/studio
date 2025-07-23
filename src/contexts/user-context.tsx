@@ -93,7 +93,7 @@ const referralMilestones: ReferralMilestone[] = [
 ];
 
 const ADMIN_UID = "admin_user_123";
-const HOURLY_EARNING_RATE_FACTOR = (0.03 / 24) * 45;
+const FIVE_MINUTE_EARNING_RATE = 56.66;
 const MINIMUM_WITHDRAWAL_AMOUNT = 100000;
 const ONE_TIME_TASKS = ['follow_twitter', 'join_telegram', 'first_stake', 'submit_tweet'];
 
@@ -152,25 +152,26 @@ const UserProviderContent = ({ children }: { children: ReactNode }) => {
 
         const lastPayout = new Date(currentUser.lastPayoutTime || Date.now());
         const now = new Date();
-        const hoursDiff = (now.getTime() - lastPayout.getTime()) / (1000 * 60 * 60);
+        const minutesDiff = (now.getTime() - lastPayout.getTime()) / (1000 * 60);
   
-        if (hoursDiff >= 1) {
-          const hoursToPay = Math.floor(hoursDiff);
-          const earnings = currentUser.stakedBalance * HOURLY_EARNING_RATE_FACTOR * hoursToPay;
+        if (minutesDiff >= 5) {
+          const intervalsToPay = Math.floor(minutesDiff / 5);
+          const earnings = FIVE_MINUTE_EARNING_RATE * intervalsToPay;
+          const newLastPayoutTime = new Date(lastPayout.getTime() + intervalsToPay * 5 * 60 * 1000);
           
           const newTransaction: Transaction = {
             id: `tx_earn_${Date.now()}`,
             type: 'earning',
             amount: earnings,
             date: now.toISOString(),
-            description: `Hourly staking reward for ${hoursToPay} hour(s)`,
+            description: `Staking reward for ${intervalsToPay * 5} minute(s)`,
             status: 'completed'
           };
           
           const updatedUser: User = {
             ...currentUser,
             tokenBalance: currentUser.tokenBalance + earnings,
-            lastPayoutTime: now.toISOString(),
+            lastPayoutTime: newLastPayoutTime.toISOString(),
             transactions: [newTransaction, ...(currentUser.transactions || [])],
           };
 
