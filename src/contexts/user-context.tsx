@@ -55,6 +55,7 @@ interface UserContextType {
   referralMilestones: ReferralMilestone[];
   loginIconUrl: string;
   loginBgUrl: string;
+  mainBgUrl: string;
   login: (uid: string) => void;
   logout: () => void;
   updateTokenBalance: (amount: number) => void;
@@ -71,6 +72,7 @@ interface UserContextType {
   getAllUsers: () => { [key: string]: User };
   updateLoginIconUrl: (url: string) => void;
   updateLoginBgUrl: (url: string) => void;
+  updateMainBgUrl: (url: string) => void;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -108,6 +110,7 @@ const UserProviderContent = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const [loginIconUrl, setLoginIconUrl] = useState('');
   const [loginBgUrl, setLoginBgUrl] = useState('');
+  const [mainBgUrl, setMainBgUrl] = useState('');
 
   const searchParams = useSearchParams();
   const ref = searchParams.get('ref');
@@ -138,8 +141,11 @@ const UserProviderContent = ({ children }: { children: ReactNode }) => {
       const storedIconUrl = localStorage.getItem('pikaLoginIconUrl');
       if (storedIconUrl) setLoginIconUrl(storedIconUrl);
       
-      const storedBgUrl = localStorage.getItem('pikaLoginBgUrl');
-      if (storedBgUrl) setLoginBgUrl(storedBgUrl);
+      const storedLoginBgUrl = localStorage.getItem('pikaLoginBgUrl');
+      if (storedLoginBgUrl) setLoginBgUrl(storedLoginBgUrl);
+      
+      const storedMainBgUrl = localStorage.getItem('pikaMainBgUrl');
+      if (storedMainBgUrl) setMainBgUrl(storedMainBgUrl);
 
     } catch (error) {
       console.error("Failed to parse from localStorage", error);
@@ -148,6 +154,7 @@ const UserProviderContent = ({ children }: { children: ReactNode }) => {
       localStorage.removeItem('pikaTokenDeviceUser');
       localStorage.removeItem('pikaLoginIconUrl');
       localStorage.removeItem('pikaLoginBgUrl');
+      localStorage.removeItem('pikaMainBgUrl');
     } finally {
       setLoading(false);
     }
@@ -556,9 +563,15 @@ const UserProviderContent = ({ children }: { children: ReactNode }) => {
     setLoginBgUrl(url);
     localStorage.setItem('pikaLoginBgUrl', url);
   }
+  
+  const updateMainBgUrl = (url: string) => {
+    if (!user || !user.isAdmin) return;
+    setMainBgUrl(url);
+    localStorage.setItem('pikaMainBgUrl', url);
+  }
 
   return (
-    <UserContext.Provider value={{ user, loading, isAdmin: user?.isAdmin || false, tasks, referralMilestones, login, logout, updateTokenBalance, stakeTokens, withdrawTokens, claimTaskReward, claimReferralMilestone, addTask, editTask, deleteTask, approveTransaction, rejectTransaction, getAllTransactions, getAllUsers, loginIconUrl, loginBgUrl, updateLoginIconUrl, updateLoginBgUrl }}>
+    <UserContext.Provider value={{ user, loading, isAdmin: user?.isAdmin || false, tasks, referralMilestones, login, logout, updateTokenBalance, stakeTokens, withdrawTokens, claimTaskReward, claimReferralMilestone, addTask, editTask, deleteTask, approveTransaction, rejectTransaction, getAllTransactions, getAllUsers, loginIconUrl, loginBgUrl, mainBgUrl, updateLoginIconUrl, updateLoginBgUrl, updateMainBgUrl }}>
       {children}
     </UserContext.Provider>
   );

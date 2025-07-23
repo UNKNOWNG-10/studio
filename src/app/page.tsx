@@ -19,30 +19,37 @@ import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
 
 function AdminSettings() {
-  const { loginIconUrl, loginBgUrl, updateLoginIconUrl, updateLoginBgUrl } = useUser();
+  const { loginIconUrl, loginBgUrl, mainBgUrl, updateLoginIconUrl, updateLoginBgUrl, updateMainBgUrl } = useUser();
   const [iconUrl, setIconUrl] = useState('');
-  const [bgUrl, setBgUrl] = useState('');
+  const [loginBg, setLoginBg] = useState('');
+  const [mainBg, setMainBg] = useState('');
 
   useEffect(() => {
     setIconUrl(loginIconUrl);
-    setBgUrl(loginBgUrl);
-  }, [loginIconUrl, loginBgUrl]);
+    setLoginBg(loginBgUrl);
+    setMainBg(mainBgUrl);
+  }, [loginIconUrl, loginBgUrl, mainBgUrl]);
 
   const handleIconSave = () => {
     updateLoginIconUrl(iconUrl);
     toast({ title: 'Icon URL updated!' });
   };
   
-  const handleBgSave = () => {
-    updateLoginBgUrl(bgUrl);
-    toast({ title: 'Background URL updated!' });
+  const handleLoginBgSave = () => {
+    updateLoginBgUrl(loginBg);
+    toast({ title: 'Login Background URL updated!' });
+  };
+  
+  const handleMainBgSave = () => {
+    updateMainBgUrl(mainBg);
+    toast({ title: 'Dashboard Background URL updated!' });
   };
 
   return (
     <Card className="mt-8">
       <CardHeader>
         <CardTitle className="flex items-center"><Settings className="mr-2" /> Admin Settings</CardTitle>
-        <CardDescription>Customize the appearance of the login page.</CardDescription>
+        <CardDescription>Customize the appearance of the application.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="space-y-2">
@@ -53,10 +60,17 @@ function AdminSettings() {
           </div>
         </div>
         <div className="space-y-2">
-          <Label htmlFor="bgUrl" className="flex items-center"><Wallpaper className="mr-2 h-4 w-4" /> Login Page Background URL</Label>
+          <Label htmlFor="loginBgUrl" className="flex items-center"><Wallpaper className="mr-2 h-4 w-4" /> Login Page Background URL</Label>
            <div className="flex items-center gap-2">
-            <Input id="bgUrl" value={bgUrl} onChange={(e) => setBgUrl(e.target.value)} placeholder="https://example.com/background.jpg" />
-            <Button onClick={handleBgSave}>Save</Button>
+            <Input id="loginBgUrl" value={loginBg} onChange={(e) => setLoginBg(e.target.value)} placeholder="https://example.com/background.jpg" />
+            <Button onClick={handleLoginBgSave}>Save</Button>
+          </div>
+        </div>
+         <div className="space-y-2">
+          <Label htmlFor="mainBgUrl" className="flex items-center"><Wallpaper className="mr-2 h-4 w-4" /> Dashboard Background URL</Label>
+           <div className="flex items-center gap-2">
+            <Input id="mainBgUrl" value={mainBg} onChange={(e) => setMainBg(e.target.value)} placeholder="https://example.com/dashboard-bg.jpg" />
+            <Button onClick={handleMainBgSave}>Save</Button>
           </div>
         </div>
       </CardContent>
@@ -65,11 +79,8 @@ function AdminSettings() {
 }
 
 export default function DashboardPage() {
-  const { user, loading, logout, getAllUsers } = useUser();
+  const { user, loading, logout, mainBgUrl } = useUser();
   const router = useRouter();
-
-  const allUsers = getAllUsers();
-  const onlineUsers = useMemo(() => Object.keys(allUsers).length, [allUsers]);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -90,13 +101,17 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col">
-       <header className="container mx-auto flex items-center justify-between p-4 border-b">
+    <div 
+      className="min-h-screen bg-background text-foreground flex flex-col bg-cover bg-center bg-fixed"
+      style={{ backgroundImage: mainBgUrl ? `url(${mainBgUrl})` : 'none' }}
+    >
+      <div className="min-h-screen flex flex-col bg-background/80 backdrop-blur-sm">
+       <header className="container mx-auto flex items-center justify-between p-4 border-b border-white/20">
         <h1 className="text-2xl font-bold text-primary font-headline">Pika Token</h1>
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2 rounded-full bg-secondary px-4 py-2">
             <Wallet className="h-5 w-5 text-primary" />
-            <span className="font-semibold text-lg">{Math.floor(user.tokenBalance).toLocaleString()}</span>
+            <span className="font-semibold text-lg text-foreground">{Math.floor(user.tokenBalance).toLocaleString()}</span>
             <span className="text-sm text-muted-foreground">Pika Tokens</span>
           </div>
           <Button variant="ghost" size="icon" onClick={() => {
@@ -143,6 +158,7 @@ export default function DashboardPage() {
           </div>
         </div>
       </footer>
+      </div>
     </div>
   );
 }
