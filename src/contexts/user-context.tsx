@@ -93,7 +93,7 @@ const referralMilestones: ReferralMilestone[] = [
 ];
 
 const ADMIN_UID = "admin_user_123";
-const FIVE_MINUTE_EARNING_RATE = 56.66;
+const FIVE_MINUTE_EARNING_RATE = 15;
 const MINIMUM_WITHDRAWAL_AMOUNT = 100000;
 const ONE_TIME_TASKS = ['follow_twitter', 'join_telegram', 'first_stake', 'submit_tweet'];
 

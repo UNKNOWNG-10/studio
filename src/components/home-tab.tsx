@@ -84,7 +84,7 @@ export default function HomeTab() {
     toast({ title: 'Success', description: 'Transaction rejected.'});
   }
 
-  const hourlyEarning = (56.66 * 12); // 56.66 tokens every 5 mins * 12 (to get per hour)
+  const hourlyEarning = (15 * 12); // 15 tokens every 5 mins * 12 (to get per hour)
   const tokenToUsdtRate = 0.0001;
 
   const getOrderId = (description: string) => {
