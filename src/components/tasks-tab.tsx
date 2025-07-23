@@ -2,10 +2,10 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useUser, Task } from '@/contexts/user-context';
+import { useUser, Task, User } from '@/contexts/user-context';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Check, Gift, Twitter, Send, Tv, PlusCircle, Tag, Trophy, Loader2, ExternalLink, Trash2, Edit } from 'lucide-react';
+import { Check, Gift, Twitter, Send, Tv, PlusCircle, Tag, Trophy, Loader2, ExternalLink, Trash2, Edit, Users, BarChart2, Repeat, Eye, MessageSquare, Save } from 'lucide-react';
 import Image from 'next/image';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -169,16 +169,16 @@ const TaskCard = ({ task }: { task: Task }) => {
     buttonText = 'Pending Approval';
     isButtonDisabled = true;
   } else if (task.id === 'watch_ad') {
-    if (timeLeft > 0) {
+      if (timeLeft > 0) {
         buttonText = `Next in ${formatTime(timeLeft)}`;
         isButtonDisabled = true;
-    } else if (isClaiming) {
-        buttonText = '';
+      } else if (isClaiming) {
+        buttonText = ''; // Loader will be shown
         isButtonDisabled = true;
-    } else {
+      } else {
         buttonText = 'Claim Reward';
         isButtonDisabled = false;
-    }
+      }
   } else if (task.requiresApproval) {
      buttonText = 'Submit for Approval';
      isButtonDisabled = isClaiming || isCompletedOnce;
@@ -304,7 +304,7 @@ const TaskCard = ({ task }: { task: Task }) => {
         if (!open) {
             // This logic runs when the dialog is closed.
             // We can now claim the reward if it was the first time.
-            if (!isCompletedOnce) {
+            if (!lastCompleted) {
                 handleClaim();
             }
         }
@@ -313,6 +313,7 @@ const TaskCard = ({ task }: { task: Task }) => {
         <DialogContent className="max-w-3xl">
           <DialogHeader>
             <DialogTitle>Task: {task.title}</DialogTitle>
+             <DialogDescription>Watch the ad below. For your first watch, the reward is granted after closing this window. Subsequent rewards are available after a short cooldown.</DialogDescription>
           </DialogHeader>
           <div className="py-4 space-y-4">
               <div className="p-4 border rounded-lg min-h-[200px]" dangerouslySetInnerHTML={{ __html: task.htmlContent || '' }} />
@@ -362,9 +363,92 @@ const TaskCard = ({ task }: { task: Task }) => {
   );
 };
 
+const AdminUserDetailsPanel = () => {
+    const { getAllUsers, adminNotes, updateAdminNotes } = useUser();
+    const [notes, setNotes] = useState(adminNotes);
+
+    const usersData = React.useMemo(() => Object.values(getAllUsers()).filter(u => !u.isAdmin), [getAllUsers]);
+
+    const totalUsers = usersData.length;
+    
+    const totalEarnings = usersData.reduce((acc, user) => {
+        const userEarnings = user.transactions
+            .filter(tx => tx.amount > 0 && tx.type !== 'stake' && tx.type !== 'login_bonus')
+            .reduce((sum, tx) => sum + tx.amount, 0);
+        return acc + userEarnings;
+    }, 0);
+
+    const totalReferrals = usersData.reduce((acc, user) => acc + (user.referrals?.length || 0), 0);
+
+    const adsWatched = usersData.reduce((acc, user) => {
+        const adWatches = user.transactions.filter(tx => tx.taskId === 'watch_ad').length;
+        return acc + adWatches;
+    }, 0);
+
+    const handleSaveNotes = () => {
+        updateAdminNotes(notes);
+        toast({ title: 'Notes Saved', description: 'Your notes have been updated.' });
+    };
+
+    return (
+        <Card className="shadow-lg">
+            <CardHeader>
+                <CardTitle className="text-xl font-headline">User Details</CardTitle>
+                <CardDescription>An overview of platform-wide user activity.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <Users className="h-5 w-5 text-muted-foreground" />
+                        <span className="font-medium">Total Users</span>
+                    </div>
+                    <span className="font-bold text-lg">{totalUsers}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <BarChart2 className="h-5 w-5 text-muted-foreground" />
+                        <span className="font-medium">Total Earned</span>
+                    </div>
+                    <span className="font-bold text-lg">{totalEarnings.toLocaleString()}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <Repeat className="h-5 w-5 text-muted-foreground" />
+                        <span className="font-medium">Total Referrals</span>
+                    </div>
+                    <span className="font-bold text-lg">{totalReferrals}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <Eye className="h-5 w-5 text-muted-foreground" />
+                        <span className="font-medium">Ads Watched</span>
+                    </div>
+                    <span className="font-bold text-lg">{adsWatched}</span>
+                </div>
+                <div className="space-y-2 pt-4">
+                     <Label htmlFor="adminNotes" className="flex items-center gap-2 text-base"><MessageSquare className="h-5 w-5" />User View Opinion</Label>
+                    <Textarea 
+                        id="adminNotes"
+                        value={notes}
+                        onChange={(e) => setNotes(e.target.value)}
+                        placeholder="Your private notes and observations about users..."
+                        rows={6}
+                    />
+                </div>
+            </CardContent>
+            <CardFooter>
+                 <Button className="w-full" onClick={handleSaveNotes}>
+                    <Save className="mr-2 h-4 w-4" />
+                    Save Notes
+                </Button>
+            </CardFooter>
+        </Card>
+    )
+}
+
 
 export default function TasksTab() {
-  const { isAdmin, tasks, addTask } = useUser();
+  const { user, isAdmin, tasks, addTask } = useUser();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTaskReward, setNewTaskReward] = useState('');
@@ -392,8 +476,7 @@ export default function TasksTab() {
   };
 
   return (
-    <div className="w-full max-w-4xl mx-auto mt-6">
-      <div>
+    <div className="w-full max-w-6xl mx-auto mt-6">
         <div className="text-center mb-8">
           <h2 className="text-3xl font-bold font-headline">Complete Tasks, Earn Rewards</h2>
           <p className="text-muted-foreground">Get extra Pika Tokens by completing these simple tasks.</p>
@@ -448,10 +531,14 @@ export default function TasksTab() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {tasks.map((task) => (
-             <TaskCard key={task.id} task={task} />
-          ))}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+        <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
+            {tasks.map((task) => (
+                <TaskCard key={task.id} task={task} />
+            ))}
+        </div>
+        <div className="lg:col-span-1">
+            {isAdmin && <AdminUserDetailsPanel />}
         </div>
       </div>
     </div>

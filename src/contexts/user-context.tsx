@@ -56,6 +56,7 @@ interface UserContextType {
   loginIconUrl: string;
   loginBgUrl: string;
   mainBgUrl: string;
+  adminNotes: string;
   login: (uid: string) => void;
   logout: () => void;
   updateTokenBalance: (amount: number) => void;
@@ -73,6 +74,7 @@ interface UserContextType {
   updateLoginIconUrl: (url: string) => void;
   updateLoginBgUrl: (url: string) => void;
   updateMainBgUrl: (url: string) => void;
+  updateAdminNotes: (notes: string) => void;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -111,6 +113,7 @@ const UserProviderContent = ({ children }: { children: ReactNode }) => {
   const [loginIconUrl, setLoginIconUrl] = useState('');
   const [loginBgUrl, setLoginBgUrl] = useState('');
   const [mainBgUrl, setMainBgUrl] = useState('');
+  const [adminNotes, setAdminNotes] = useState('');
 
   const searchParams = useSearchParams();
   const ref = searchParams.get('ref');
@@ -147,6 +150,9 @@ const UserProviderContent = ({ children }: { children: ReactNode }) => {
       const storedMainBgUrl = localStorage.getItem('pikaMainBgUrl');
       if (storedMainBgUrl) setMainBgUrl(storedMainBgUrl);
 
+      const storedAdminNotes = localStorage.getItem('pikaAdminNotes');
+      if (storedAdminNotes) setAdminNotes(storedAdminNotes);
+
     } catch (error) {
       console.error("Failed to parse from localStorage", error);
       localStorage.removeItem('pikaTokenUsers');
@@ -155,6 +161,7 @@ const UserProviderContent = ({ children }: { children: ReactNode }) => {
       localStorage.removeItem('pikaLoginIconUrl');
       localStorage.removeItem('pikaLoginBgUrl');
       localStorage.removeItem('pikaMainBgUrl');
+      localStorage.removeItem('pikaAdminNotes');
     } finally {
       setLoading(false);
     }
@@ -466,7 +473,8 @@ const UserProviderContent = ({ children }: { children: ReactNode }) => {
       amount: task.reward,
       date: now.toISOString(),
       description: `Reward for task: ${task.title}`,
-      status: 'completed'
+      status: 'completed',
+      taskId: taskId
     };
 
     const updatedUser = {
@@ -570,8 +578,14 @@ const UserProviderContent = ({ children }: { children: ReactNode }) => {
     localStorage.setItem('pikaMainBgUrl', url);
   }
 
+  const updateAdminNotes = (notes: string) => {
+    if (!user || !user.isAdmin) return;
+    setAdminNotes(notes);
+    localStorage.setItem('pikaAdminNotes', notes);
+  };
+
   return (
-    <UserContext.Provider value={{ user, loading, isAdmin: user?.isAdmin || false, tasks, referralMilestones, login, logout, updateTokenBalance, stakeTokens, withdrawTokens, claimTaskReward, claimReferralMilestone, addTask, editTask, deleteTask, approveTransaction, rejectTransaction, getAllTransactions, getAllUsers, loginIconUrl, loginBgUrl, mainBgUrl, updateLoginIconUrl, updateLoginBgUrl, updateMainBgUrl }}>
+    <UserContext.Provider value={{ user, loading, isAdmin: user?.isAdmin || false, tasks, referralMilestones, login, logout, updateTokenBalance, stakeTokens, withdrawTokens, claimTaskReward, claimReferralMilestone, addTask, editTask, deleteTask, approveTransaction, rejectTransaction, getAllTransactions, getAllUsers, loginIconUrl, loginBgUrl, mainBgUrl, adminNotes, updateLoginIconUrl, updateLoginBgUrl, updateMainBgUrl, updateAdminNotes }}>
       {children}
     </UserContext.Provider>
   );
