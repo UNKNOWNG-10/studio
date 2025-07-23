@@ -83,7 +83,7 @@ export default function DashboardPage() {
         <div className="container mx-auto px-4">
            <div className="mt-8 pt-6 border-t border-slate-700 flex flex-col md:flex-row justify-between items-center text-sm">
             <div className="flex gap-4 mb-4 md:mb-0">
-              <a href="#" className="hover:text-primary transition-colors">Privacy Policy</a>
+              <a href="/privacy-policy" className="hover:text-primary transition-colors">Privacy Policy</a>
               <a href="#" className="hover:text-primary transition-colors">Terms of Service</a>
               <a href="#" className="hover:text-primary transition-colors">About Us</a>
               <a href="#" className="hover:text-primary transition-colors">Contact</a>
