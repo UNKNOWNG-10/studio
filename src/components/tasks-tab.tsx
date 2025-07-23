@@ -416,7 +416,7 @@ export default function TasksTab() {
                   <DialogTitle>Create a New Task</DialogTitle>
                   <DialogDescription>
                     Add a new task that will be available for all users to complete.
-                  </Description>
+                  </DialogDescription>
                 </DialogHeader>
                 <div className="py-4 space-y-4">
                   <div>
