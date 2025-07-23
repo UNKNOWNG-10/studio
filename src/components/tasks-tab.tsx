@@ -65,7 +65,7 @@ const TaskCard = ({ task }: { task: Task }) => {
 
   const isOneTimeTask = ONE_TIME_TASKS.includes(task.id);
   
-  const cooldown = 60 * 1000;
+  const cooldown = task.id === 'watch_ad' ? 5 * 1000 : 60 * 1000;
 
   useEffect(() => {
     if (isOneTimeTask || !lastCompleted || task.requiresApproval) {
@@ -98,11 +98,13 @@ const TaskCard = ({ task }: { task: Task }) => {
         description = "You must stake first to claim this reward.";
       } else if (task.requiresApproval) {
         description = "This task requires admin approval and can only be done once."
+      } else if (task.id === 'watch_ad' && isAdViewerOpen) {
+        description = 'You can claim your reward after closing the ad viewer and the cooldown finishes.';
       }
       toast({ title: "Cannot Claim Task", description, variant: "destructive" });
     }
     setIsClaiming(false);
-  }
+  };
 
   const handleSubmitForApproval = async () => {
     setIsClaiming(true);
@@ -110,12 +112,15 @@ const TaskCard = ({ task }: { task: Task }) => {
     if (success) {
         setIsSubmitDialogOpen(false);
         setSubmission('');
-        if (isAdViewerOpen) setIsAdViewerOpen(false);
+        if (isAdViewerOpen) {
+          setIsAdViewerOpen(false);
+          toast({ title: 'Task Submitted', description: 'You can now claim your reward after the cooldown.' });
+        }
     } else {
        toast({ title: "Submission Failed", description: "You may have already submitted this task.", variant: "destructive" });
     }
     setIsClaiming(false);
-  }
+  };
 
   const handleAction = () => {
     if (task.id === 'watch_ad' && !isAdmin) {
@@ -129,7 +134,7 @@ const TaskCard = ({ task }: { task: Task }) => {
     } else {
       handleClaim();
     }
-  }
+  };
 
   const handleEditSave = () => {
     const reward = parseInt(editedReward, 10);
@@ -147,14 +152,14 @@ const TaskCard = ({ task }: { task: Task }) => {
     editTask(updatedTask);
     toast({ title: 'Task Updated', description: 'Task has been successfully updated.' });
     setIsEditDialogOpen(false);
-  }
+  };
 
   const formatTime = (ms: number) => {
     const seconds = Math.floor((ms / 1000) % 60);
     const minutes = Math.floor((ms / 1000 / 60) % 60);
     if (minutes > 0) return `${minutes}m ${seconds}s`;
     return `${seconds}s`;
-  }
+  };
   
   const isCompletedOnce = !!lastCompleted;
   let isButtonDisabled = isClaiming || (isOneTimeTask && isCompletedOnce) || timeLeft > 0 || (task.requiresApproval && isCompletedOnce);
@@ -163,8 +168,11 @@ const TaskCard = ({ task }: { task: Task }) => {
   if (pendingTransaction) {
     buttonText = 'Pending Approval';
     isButtonDisabled = true;
+  } else if (task.id === 'watch_ad' && !isCompletedOnce) {
+    buttonText = 'Start Task';
+    isButtonDisabled = false;
   } else if (task.requiresApproval) {
-     buttonText = task.id === 'watch_ad' ? 'Start Task' : 'Submit for Approval';
+     buttonText = 'Submit for Approval';
      isButtonDisabled = isClaiming || isCompletedOnce;
   } else if (task.url && !hasVisitedLink && !isCompletedOnce) {
     buttonText = 'Go to Link';
@@ -284,22 +292,28 @@ const TaskCard = ({ task }: { task: Task }) => {
     </Dialog>
 
     {/* Ad Viewer Dialog */}
-    <Dialog open={isAdViewerOpen} onOpenChange={setIsAdViewerOpen}>
+    <Dialog open={isAdViewerOpen} onOpenChange={(open) => {
+        if (!open) {
+            // This logic runs when the dialog is closed.
+            // We can now claim the reward if it was the first time.
+            if (!isCompletedOnce) {
+                handleClaim();
+            }
+        }
+        setIsAdViewerOpen(open);
+    }}>
         <DialogContent className="max-w-3xl">
           <DialogHeader>
             <DialogTitle>Task: {task.title}</DialogTitle>
             <DialogDescription>
-              Complete the action below to submit this task for approval.
+              Watch the ad below. Your reward will be available after closing this window and waiting for the cooldown.
             </DialogDescription>
           </DialogHeader>
           <div className="py-4 space-y-4">
               <div className="p-4 border rounded-lg min-h-[200px]" dangerouslySetInnerHTML={{ __html: task.htmlContent || '' }} />
           </div>
           <DialogFooter>
-              <Button onClick={() => { setSubmission('Ad watched'); handleSubmitForApproval(); }} disabled={isClaiming}>
-                  {isClaiming && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  I've completed this
-              </Button>
+              <Button onClick={() => setIsAdViewerOpen(false)}>Close Viewer</Button>
           </DialogFooter>
         </DialogContent>
     </Dialog>
@@ -341,7 +355,7 @@ const TaskCard = ({ task }: { task: Task }) => {
     )}
     </>
   );
-}
+};
 
 
 export default function TasksTab() {
@@ -394,7 +408,7 @@ export default function TasksTab() {
                   <DialogTitle>Create a New Task</DialogTitle>
                   <DialogDescription>
                     Add a new task that will be available for all users to complete.
-                  </DialogDescription>
+                  </Description>
                 </DialogHeader>
                 <div className="py-4 space-y-4">
                   <div>
