@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, Suspense } from 'react';
 import { toast } from '@/hooks/use-toast';
 import { useSearchParams } from 'next/navigation';
 
@@ -242,7 +242,9 @@ const UserProviderContent = ({ children }: { children: ReactNode }) => {
     };
     
     updateUserAndSave(newUser);
-    localStorage.setItem('pikaTokenDeviceUser', uid);
+    if (!isAdminLogin) {
+        localStorage.setItem('pikaTokenDeviceUser', uid);
+    }
   };
 
   const logout = () => {
@@ -536,7 +538,9 @@ const UserProviderContent = ({ children }: { children: ReactNode }) => {
 };
 
 export const UserProvider = ({ children }: { children: ReactNode }) => (
-    <UserProviderContent>{children}</UserProviderContent>
+    <Suspense>
+        <UserProviderContent>{children}</UserProviderContent>
+    </Suspense>
 );
 
 export const useUser = () => {

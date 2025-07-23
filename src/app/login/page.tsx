@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useUser } from '@/contexts/user-context';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -16,6 +16,8 @@ export default function LoginPage() {
   const { login, user, loading } = useUser();
   const router = useRouter();
   const [isNewUser, setIsNewUser] = useState(false);
+  const searchParams = useSearchParams();
+  const referrerId = searchParams.get('ref');
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -90,14 +92,19 @@ export default function LoginPage() {
               </div>
             </form>
           </CardContent>
-          <CardFooter>
+          <CardFooter className="flex-col">
             <Button 
               className="w-full" 
               onClick={handleLogin}
               disabled={!uid}
             >
-              {isNewUser ? 'Sign In & Claim 1000 Pika Tokens' : 'Sign In'}
+              Sign In
             </Button>
+            {referrerId && (
+                <p className="text-sm text-muted-foreground mt-4">
+                    Invited by: {referrerId}
+                </p>
+            )}
           </CardFooter>
         </Card>
       </div>
