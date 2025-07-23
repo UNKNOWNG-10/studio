@@ -15,15 +15,12 @@ function LoginPageContent() {
   const [uid, setUid] = useState('');
   const { login, user, loading } = useUser();
   const router = useRouter();
-  const [deviceUid, setDeviceUid] = useState<string | null>(null);
+  const [isNewUser, setIsNewUser] = useState(false);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
         const storedDeviceUid = localStorage.getItem('pikaTokenDeviceUser');
-        setDeviceUid(storedDeviceUid);
-        if (storedDeviceUid) {
-            setUid(storedDeviceUid);
-        }
+        setIsNewUser(!storedDeviceUid);
     }
   }, []);
 
@@ -74,7 +71,7 @@ function LoginPageContent() {
                />
             </div>
             <CardTitle className="text-3xl font-headline">Pika Token</CardTitle>
-            <CardDescription>{deviceUid ? "Welcome back! Please sign in." : "Sign in with your Binance UID to start earning."}</CardDescription>
+            <CardDescription>{isNewUser ? "Sign in with your Binance UID to start earning." : "Welcome back! Please sign in." }</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={(e) => { e.preventDefault(); handleLogin(); }}>
@@ -99,7 +96,7 @@ function LoginPageContent() {
               onClick={handleLogin}
               disabled={!uid}
             >
-              {deviceUid ? 'Sign In' : 'Sign In & Claim 1000 Pika Tokens'}
+              {isNewUser ? 'Sign In & Claim 1000 Pika Tokens' : 'Sign In'}
             </Button>
           </CardFooter>
         </Card>
@@ -115,3 +112,5 @@ export default function LoginPage() {
     </Suspense>
   )
 }
+
+    

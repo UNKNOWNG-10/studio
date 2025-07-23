@@ -13,6 +13,7 @@ export type Transaction = {
   description: string;
   status: 'pending' | 'approved' | 'completed' | 'rejected';
   taskId?: string; // Link transaction to a specific task
+  uid?: string;
 };
 
 export type Task = {
@@ -58,7 +59,7 @@ interface UserContextType {
   withdrawTokens: (amount: number) => boolean;
   claimTaskReward: (taskId: string, submission?: string) => Promise<boolean>;
   claimReferralMilestone: (milestoneId: number) => Promise<boolean>;
-  addTask: (task: Omit<Task, 'id'>) => void;
+  addTask: (task: Omit<Task, 'id' | 'icon'>) => void;
   approveTransaction: (transactionId: string, targetUserId: string) => void;
   rejectTransaction: (transactionId: string, targetUserId: string) => void;
   getAllTransactions: () => Transaction[];
@@ -192,8 +193,10 @@ const UserProviderContent = ({ children }: { children: ReactNode }) => {
   };
 
   const login = (uid: string) => {
+    const isAdminLogin = uid === ADMIN_UID;
     const deviceUser = localStorage.getItem('pikaTokenDeviceUser');
-    if (deviceUser && deviceUser !== uid) {
+    
+    if (deviceUser && deviceUser !== uid && !isAdminLogin) {
       toast({ title: "Login Error", description: "This device is already associated with another account.", variant: "destructive" });
       return;
     }
@@ -204,7 +207,6 @@ const UserProviderContent = ({ children }: { children: ReactNode }) => {
       return;
     }
     
-    const isAdmin = uid === ADMIN_UID;
     const newTransaction: Transaction = {
       id: `tx_bonus_${Date.now()}`,
       type: 'login_bonus',
@@ -215,7 +217,7 @@ const UserProviderContent = ({ children }: { children: ReactNode }) => {
     };
     const newUser: User = {
       uid,
-      isAdmin,
+      isAdmin: isAdminLogin,
       tokenBalance: 1000,
       stakedBalance: 0,
       hasStaked: false,
@@ -393,8 +395,10 @@ const UserProviderContent = ({ children }: { children: ReactNode }) => {
 
     const lastCompleted = user.tasksCompleted[taskId];
     const now = new Date();
+    
+    const isOneTime = ONE_TIME_TASKS.includes(taskId) || task.requiresApproval;
 
-    if (ONE_TIME_TASKS.includes(taskId) || task.requiresApproval) {
+    if (isOneTime) {
       if (lastCompleted) return false; 
       if (taskId === 'first_stake' && user.stakedBalance <= 0) return false; 
     } else {
@@ -481,12 +485,13 @@ const UserProviderContent = ({ children }: { children: ReactNode }) => {
     return true;
   };
 
-  const addTask = (task: Omit<Task, 'id'>) => {
+  const addTask = (task: Omit<Task, 'id' | 'icon'>) => {
     if(!user || !user.isAdmin) return;
 
     const newTask: Task = {
       ...task,
-      id: `task_${Date.now()}`
+      id: `task_${Date.now()}`,
+      icon: 'Tag',
     };
 
     const updatedTasks = [...tasks, newTask];
@@ -521,3 +526,5 @@ export const useUser = () => {
   }
   return context;
 };
+
+    
