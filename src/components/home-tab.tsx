@@ -84,7 +84,7 @@ export default function HomeTab() {
     toast({ title: 'Success', description: 'Transaction rejected.'});
   }
 
-  const hourlyEarning = (15 * 12); // 15 tokens every 5 mins * 12 (to get per hour)
+  const hourlyEarning = (15 * 12);
   const tokenToUsdtRate = 0.0001;
 
   const getOrderId = (description: string) => {
@@ -93,15 +93,16 @@ export default function HomeTab() {
   };
 
   return (
-    <div className="relative w-full max-w-4xl mx-auto mt-6 space-y-8">
+    <div className="relative w-full max-w-4xl mx-auto mt-6 space-y-8 p-4 rounded-lg">
        <Image
-          src="https://placehold.co/1200x800.png"
-          alt="Home background"
+          src="https://placehold.co/1920x1080.png"
+          alt="Pikachu background"
           layout="fill"
           objectFit="cover"
-          className="absolute inset-0 z-0 opacity-20 rounded-lg"
-          data-ai-hint="financial growth"
+          className="absolute inset-0 z-0 rounded-lg"
+          data-ai-hint="pikachu thunder"
         />
+      <div className="absolute inset-0 bg-black/30 backdrop-blur-sm z-0 rounded-lg"></div>
       <div className="relative z-10 space-y-8">
         <Card className="shadow-lg bg-card/80 backdrop-blur-sm">
           <CardHeader>

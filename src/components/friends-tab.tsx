@@ -28,7 +28,7 @@ const MilestoneCard = ({ milestone }: { milestone: ReferralMilestone }) => {
   };
   
   return (
-    <Card className="flex flex-col justify-between">
+    <Card className="flex flex-col justify-between bg-card/80 backdrop-blur-sm">
       <CardHeader className="flex-row items-start gap-4 space-y-0">
           <div className="space-y-1">
              <CardTitle>{milestone.title}</CardTitle>
@@ -70,15 +70,16 @@ export default function FriendsTab() {
   const totalBonus = referralsCount * 300;
 
   return (
-    <div className="relative w-full max-w-4xl mx-auto mt-6 space-y-8">
+    <div className="relative w-full max-w-4xl mx-auto mt-6 space-y-8 p-4 rounded-lg">
       <Image
-          src="https://placehold.co/1200x800.png"
-          alt="Friends background"
+          src="https://placehold.co/1920x1080.png"
+          alt="Pikachu background"
           layout="fill"
           objectFit="cover"
-          className="absolute inset-0 z-0 opacity-20 rounded-lg"
-          data-ai-hint="social connection"
+          className="absolute inset-0 z-0 rounded-lg"
+          data-ai-hint="pikachu thunder"
         />
+      <div className="absolute inset-0 bg-black/30 backdrop-blur-sm z-0 rounded-lg"></div>
       <div className="relative z-10 space-y-8">
         <Card className="shadow-lg bg-card/80 backdrop-blur-sm">
           <CardHeader>
@@ -122,7 +123,7 @@ export default function FriendsTab() {
         </Card>
 
         <div>
-            <h2 className="text-2xl font-bold text-center mb-4 font-headline">Referral Milestone Rewards</h2>
+            <h2 className="text-2xl font-bold text-center mb-4 font-headline text-white">Referral Milestone Rewards</h2>
              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {referralMilestones.map(milestone => (
                     <MilestoneCard key={milestone.id} milestone={milestone} />

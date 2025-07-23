@@ -51,15 +51,16 @@ export default function LeaderboardTab() {
   }, [allUsers, user]);
 
   return (
-    <div className="relative w-full max-w-4xl mx-auto mt-6">
+    <div className="relative w-full max-w-4xl mx-auto mt-6 p-4 rounded-lg">
       <Image
-        src="https://placehold.co/1200x800.png"
-        alt="Leaderboard background"
+        src="https://placehold.co/1920x1080.png"
+        alt="Pikachu background"
         layout="fill"
         objectFit="cover"
-        className="absolute inset-0 z-0 opacity-20 rounded-lg"
-        data-ai-hint="stadium crowd"
+        className="absolute inset-0 z-0 rounded-lg"
+        data-ai-hint="pikachu thunder"
       />
+      <div className="absolute inset-0 bg-black/30 backdrop-blur-sm z-0 rounded-lg"></div>
       <div className="relative z-10">
         <Card className="shadow-lg bg-card/80 backdrop-blur-sm">
           <CardHeader>

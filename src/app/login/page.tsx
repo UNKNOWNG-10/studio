@@ -15,16 +15,8 @@ export default function LoginPage() {
   const [uid, setUid] = useState('');
   const { login, user, loading } = useUser();
   const router = useRouter();
-  const [isNewUser, setIsNewUser] = useState(false);
   const searchParams = useSearchParams();
   const referrerId = searchParams.get('ref');
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-        const storedDeviceUid = localStorage.getItem('pikaTokenDeviceUser');
-        setIsNewUser(!storedDeviceUid);
-    }
-  }, []);
 
   useEffect(() => {
     if (!loading && user) {
@@ -43,37 +35,32 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="relative min-h-screen w-full grid grid-cols-1 md:grid-cols-2">
-      <div className="relative hidden md:block">
-        <Image
-          src="https://placehold.co/1200x1800.png"
-          alt="Login background"
-          layout="fill"
-          objectFit="cover"
-          className="absolute inset-0 z-0"
-          data-ai-hint="cute token mascot"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
-        <div className="relative z-10 flex flex-col justify-end h-full p-12 text-white">
-            <h2 className="text-4xl font-bold font-headline">Join the Pika Token Revolution</h2>
-            <p className="text-lg mt-4">Start your journey in the most exciting token community today. Stake, earn, and climb the leaderboard!</p>
-        </div>
-      </div>
-      <div className="flex items-center justify-center bg-background p-4">
-        <Card className="w-full max-w-sm shadow-2xl">
+    <div className="relative min-h-screen w-full flex items-center justify-center p-4">
+      <Image
+        src="https://placehold.co/1920x1080.png"
+        alt="Pikachu background"
+        layout="fill"
+        objectFit="cover"
+        className="absolute inset-0 z-0"
+        data-ai-hint="pikachu thunder"
+      />
+       <div className="absolute inset-0 bg-black/30 backdrop-blur-sm"></div>
+
+      <div className="relative z-10 w-full max-w-md">
+        <Card className="w-full shadow-2xl bg-card/80">
           <CardHeader className="text-center">
-            <div className="mx-auto rounded-full h-24 w-24 flex items-center justify-center mb-4 overflow-hidden">
+            <div className="mx-auto rounded-full h-24 w-24 flex items-center justify-center mb-4 overflow-hidden bg-yellow-300 border-4 border-yellow-400">
                <Image 
                   src="https://placehold.co/256x256.png"
                   width={100}
                   height={100}
                   alt="Pika Token"
-                  className="object-cover"
-                  data-ai-hint="cute creature"
+                  className="object-contain"
+                  data-ai-hint="cute token mascot"
                />
             </div>
             <CardTitle className="text-3xl font-headline">Pika Token</CardTitle>
-            <CardDescription>{isNewUser ? "Sign in with your Binance UID to start earning." : "Welcome back! Please sign in." }</CardDescription>
+            <CardDescription>Sign in with your Binance UID to start earning.</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={(e) => { e.preventDefault(); handleLogin(); }}>

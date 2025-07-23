@@ -373,19 +373,20 @@ export default function TasksTab() {
   };
 
   return (
-    <div className="relative w-full max-w-4xl mx-auto mt-6">
+    <div className="relative w-full max-w-4xl mx-auto mt-6 p-4 rounded-lg">
       <Image
-        src="https://placehold.co/1200x800.png"
-        alt="Tasks background"
+        src="https://placehold.co/1920x1080.png"
+        alt="Pikachu background"
         layout="fill"
         objectFit="cover"
-        className="absolute inset-0 z-0 opacity-20 rounded-lg"
-        data-ai-hint="checklist reward"
+        className="absolute inset-0 z-0 rounded-lg"
+        data-ai-hint="pikachu thunder"
       />
+      <div className="absolute inset-0 bg-black/30 backdrop-blur-sm z-0 rounded-lg"></div>
       <div className="relative z-10">
         <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold font-headline">Complete Tasks, Earn Rewards</h2>
-          <p className="text-muted-foreground">Get extra Pika Tokens by completing these simple tasks.</p>
+          <h2 className="text-3xl font-bold font-headline text-white">Complete Tasks, Earn Rewards</h2>
+          <p className="text-muted-foreground text-gray-200">Get extra Pika Tokens by completing these simple tasks.</p>
         </div>
         
         {isAdmin && (
