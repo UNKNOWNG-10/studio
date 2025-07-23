@@ -168,9 +168,17 @@ const TaskCard = ({ task }: { task: Task }) => {
   if (pendingTransaction) {
     buttonText = 'Pending Approval';
     isButtonDisabled = true;
-  } else if (task.id === 'watch_ad' && !isCompletedOnce) {
-    buttonText = 'Start Task';
-    isButtonDisabled = false;
+  } else if (task.id === 'watch_ad') {
+    if (timeLeft > 0) {
+        buttonText = `Next in ${formatTime(timeLeft)}`;
+        isButtonDisabled = true;
+    } else if (isClaiming) {
+        buttonText = '';
+        isButtonDisabled = true;
+    } else {
+        buttonText = 'Claim Reward';
+        isButtonDisabled = false;
+    }
   } else if (task.requiresApproval) {
      buttonText = 'Submit for Approval';
      isButtonDisabled = isClaiming || isCompletedOnce;
