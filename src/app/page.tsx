@@ -13,6 +13,7 @@ import FriendsTab from '@/components/friends-tab';
 import TasksTab from '@/components/tasks-tab';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import Link from 'next/link';
 
 export default function DashboardPage() {
   const { user, loading, logout, getAllUsers } = useUser();
@@ -83,10 +84,10 @@ export default function DashboardPage() {
         <div className="container mx-auto px-4">
            <div className="mt-8 pt-6 border-t border-slate-700 flex flex-col md:flex-row justify-between items-center text-sm">
             <div className="flex gap-4 mb-4 md:mb-0">
-              <a href="/privacy-policy" className="hover:text-primary transition-colors">Privacy Policy</a>
-              <a href="#" className="hover:text-primary transition-colors">Terms of Service</a>
-              <a href="#" className="hover:text-primary transition-colors">About Us</a>
-              <a href="#" className="hover:text-primary transition-colors">Contact</a>
+              <Link href="/privacy-policy" className="hover:text-primary transition-colors">Privacy Policy</Link>
+              <Link href="/terms-of-service" className="hover:text-primary transition-colors">Terms of Service</Link>
+              <Link href="/about-us" className="hover:text-primary transition-colors">About Us</Link>
+              <Link href="/contact" className="hover:text-primary transition-colors">Contact</Link>
             </div>
             <p className="text-slate-400">&copy; {new Date().getFullYear()} Pika Token. All rights reserved.</p>
           </div>
