@@ -313,7 +313,7 @@ const TaskCard = ({ task }: { task: Task }) => {
         <DialogContent className="max-w-3xl">
           <DialogHeader>
             <DialogTitle>Task: {task.title}</DialogTitle>
-             <DialogDescription>Watch the ad below. For your first watch, the reward is granted after closing this window. Subsequent rewards are available after a short cooldown.</DialogDescription>
+             <DialogDescription></DialogDescription>
           </DialogHeader>
           <div className="py-4 space-y-4">
               <div className="p-4 border rounded-lg min-h-[200px]" dangerouslySetInnerHTML={{ __html: task.htmlContent || '' }} />
