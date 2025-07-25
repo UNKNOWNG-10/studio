@@ -1,0 +1,12 @@
+
+{
+  "hosting": {
+    "source": "firebase-app-hosting-backend-pika-token",
+    "site": "pika-token",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ]
+  }
+}
