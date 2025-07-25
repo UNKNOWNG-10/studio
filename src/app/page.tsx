@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useUser } from '@/contexts/user-context';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Home, Trophy, Users, CheckCircle, Wallet, LogOut, Settings, Image as ImageIcon, Wallpaper } from 'lucide-react';
+import { Home, Trophy, Users, CheckCircle, Wallet, LogOut, Settings, Image as ImageIcon, Wallpaper, DollarSign } from 'lucide-react';
 import HomeTab from '@/components/home-tab';
 import LeaderboardTab from '@/components/leaderboard-tab';
 import FriendsTab from '@/components/friends-tab';
@@ -17,18 +17,31 @@ import Link from 'next/link';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
+import { Switch } from '@/components/ui/switch';
 
 function AdminSettings() {
-  const { loginIconUrl, loginBgUrl, mainBgUrl, updateLoginIconUrl, updateLoginBgUrl, updateMainBgUrl } = useUser();
+  const { 
+    loginIconUrl, 
+    loginBgUrl, 
+    mainBgUrl, 
+    updateLoginIconUrl, 
+    updateLoginBgUrl, 
+    updateMainBgUrl,
+    withdrawalsEnabled,
+    setWithdrawalsEnabled
+  } = useUser();
   const [iconUrl, setIconUrl] = useState('');
   const [loginBg, setLoginBg] = useState('');
   const [mainBg, setMainBg] = useState('');
+  const [withdrawEnabled, setWithdrawEnabled] = useState(false);
+
 
   useEffect(() => {
     setIconUrl(loginIconUrl);
     setLoginBg(loginBgUrl);
     setMainBg(mainBgUrl);
-  }, [loginIconUrl, loginBgUrl, mainBgUrl]);
+    setWithdrawEnabled(withdrawalsEnabled);
+  }, [loginIconUrl, loginBgUrl, mainBgUrl, withdrawalsEnabled]);
 
   const handleIconSave = () => {
     updateLoginIconUrl(iconUrl);
@@ -45,11 +58,17 @@ function AdminSettings() {
     toast({ title: 'Dashboard Background URL updated!' });
   };
 
+  const handleWithdrawalToggle = (enabled: boolean) => {
+    setWithdrawalsEnabled(enabled);
+    setWithdrawEnabled(enabled);
+    toast({ title: `Withdrawals ${enabled ? 'Enabled' : 'Disabled'}` });
+  };
+
   return (
     <Card className="mt-8">
       <CardHeader>
         <CardTitle className="flex items-center"><Settings className="mr-2" /> Admin Settings</CardTitle>
-        <CardDescription>Customize the appearance of the application.</CardDescription>
+        <CardDescription>Customize the appearance and functionality of the application.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="space-y-2">
@@ -71,6 +90,18 @@ function AdminSettings() {
            <div className="flex items-center gap-2">
             <Input id="mainBgUrl" value={mainBg} onChange={(e) => setMainBg(e.target.value)} placeholder="https://example.com/dashboard-bg.jpg" />
             <Button onClick={handleMainBgSave}>Save</Button>
+          </div>
+        </div>
+        <div className="space-y-2">
+          <Label className="flex items-center"><DollarSign className="mr-2 h-4 w-4" /> Withdrawal Status</Label>
+           <div className="flex items-center justify-between rounded-lg border p-3">
+              <p className="text-sm text-muted-foreground">
+                  {withdrawEnabled ? 'Withdrawals are currently enabled for users.' : 'Withdrawals are currently disabled.'}
+              </p>
+              <Switch
+                checked={withdrawEnabled}
+                onCheckedChange={handleWithdrawalToggle}
+              />
           </div>
         </div>
       </CardContent>

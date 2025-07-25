@@ -40,7 +40,6 @@ const TaskCard = ({ task }: { task: Task }) => {
   const [isClaiming, setIsClaiming] = useState(false);
   const [submission, setSubmission] = useState('');
   const [isSubmitDialogOpen, setIsSubmitDialogOpen] = useState(false);
-  const [isAdViewerOpen, setIsAdViewerOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
   // Edit states
@@ -65,7 +64,7 @@ const TaskCard = ({ task }: { task: Task }) => {
 
   const isOneTimeTask = ONE_TIME_TASKS.includes(task.id);
   
-  const cooldown = task.id === 'watch_ad' ? 5 * 1000 : 60 * 1000;
+  const cooldown = 60 * 1000;
 
   useEffect(() => {
     if (isOneTimeTask || !lastCompleted || task.requiresApproval) {
@@ -98,8 +97,6 @@ const TaskCard = ({ task }: { task: Task }) => {
         description = "You must stake first to claim this reward.";
       } else if (task.requiresApproval) {
         description = "This task requires admin approval and can only be done once."
-      } else if (task.id === 'watch_ad' && isAdViewerOpen) {
-        description = 'You can claim your reward after closing the ad viewer and the cooldown finishes.';
       }
       toast({ title: "Cannot Claim Task", description, variant: "destructive" });
     }
@@ -112,10 +109,8 @@ const TaskCard = ({ task }: { task: Task }) => {
     if (success) {
         setIsSubmitDialogOpen(false);
         setSubmission('');
-        if (isAdViewerOpen) {
-          setIsAdViewerOpen(false);
-          toast({ title: 'Task Submitted', description: 'You can now claim your reward after the cooldown.' });
-        }
+        toast({ title: 'Task Submitted', description: 'Your submission is pending admin approval.' });
+
     } else {
        toast({ title: "Submission Failed", description: "You may have already submitted this task.", variant: "destructive" });
     }
@@ -123,9 +118,7 @@ const TaskCard = ({ task }: { task: Task }) => {
   };
 
   const handleAction = () => {
-    if (task.id === 'watch_ad' && !isAdmin) {
-      setIsAdViewerOpen(true);
-    } else if (task.url) {
+    if (task.url && !hasVisitedLink) {
       window.open(task.url, '_blank');
       localStorage.setItem(`visited_${task.id}`, 'true');
       setHasVisitedLink(true);
@@ -168,17 +161,6 @@ const TaskCard = ({ task }: { task: Task }) => {
   if (pendingTransaction) {
     buttonText = 'Pending Approval';
     isButtonDisabled = true;
-  } else if (task.id === 'watch_ad') {
-      if (timeLeft > 0) {
-        buttonText = `Next in ${formatTime(timeLeft)}`;
-        isButtonDisabled = true;
-      } else if (isClaiming) {
-        buttonText = ''; // Loader will be shown
-        isButtonDisabled = true;
-      } else {
-        buttonText = 'Claim Reward';
-        isButtonDisabled = false;
-      }
   } else if (task.requiresApproval) {
      buttonText = 'Submit for Approval';
      isButtonDisabled = isClaiming || isCompletedOnce;
@@ -201,7 +183,7 @@ const TaskCard = ({ task }: { task: Task }) => {
     buttonText = isCompletedOnce ? 'Claim Again' : 'Claim Reward';
   }
   
-  const canEdit = isAdmin && ['follow_twitter', 'join_telegram', 'watch_ad'].includes(task.id);
+  const canEdit = isAdmin && ['follow_twitter', 'join_telegram'].includes(task.id);
 
   return (
     <>
@@ -243,7 +225,7 @@ const TaskCard = ({ task }: { task: Task }) => {
       </CardHeader>
       <CardFooter>
         <div className="w-full flex gap-2">
-           {!task.url || (task.url && hasVisitedLink) || (isCompletedOnce) || task.id === 'watch_ad' ? (
+           {!task.url || (task.url && hasVisitedLink) || (isCompletedOnce) ? (
             <Button
               className="w-full"
               onClick={handleAction}
@@ -286,7 +268,7 @@ const TaskCard = ({ task }: { task: Task }) => {
                 id="submissionData" 
                 value={submission} 
                 onChange={(e) => setSubmission(e.target.value)} 
-                placeholder="e.g., https://x.com/username/status/12345 or 'Watched the ad'"
+                placeholder="e.g., https://x.com/username/status/12345"
             />
             </div>
         </div>
@@ -299,27 +281,6 @@ const TaskCard = ({ task }: { task: Task }) => {
         </DialogContent>
     </Dialog>
 
-    {/* Ad Viewer Dialog */}
-    <Dialog open={isAdViewerOpen} onOpenChange={(open) => {
-        if (!open) {
-            // This logic runs when the dialog is closed.
-            // We can now claim the reward if it was the first time.
-            if (!lastCompleted) {
-                handleClaim();
-            }
-        }
-        setIsAdViewerOpen(open);
-    }}>
-        <DialogContent className="max-w-3xl">
-          <DialogHeader>
-            <DialogTitle>Task: {task.title}</DialogTitle>
-             <DialogDescription></DialogDescription>
-          </DialogHeader>
-          <div className="py-4 space-y-4">
-              <div className="p-4 border rounded-lg min-h-[200px]" dangerouslySetInnerHTML={{ __html: task.htmlContent || '' }} />
-          </div>
-        </DialogContent>
-    </Dialog>
     
     {/* Admin Edit Dialog */}
     {canEdit && (
@@ -341,12 +302,6 @@ const TaskCard = ({ task }: { task: Task }) => {
               <div>
                 <Label htmlFor="editTaskUrl">URL</Label>
                 <Input id="editTaskUrl" value={editedUrl} onChange={(e) => setEditedUrl(e.target.value)} />
-              </div>
-            ) : null}
-            {task.id === 'watch_ad' ? (
-               <div>
-                <Label htmlFor="editTaskHtml">Ad HTML Code</Label>
-                <Textarea id="editTaskHtml" value={editedHtml} onChange={(e) => setEditedHtml(e.target.value)} rows={10} />
               </div>
             ) : null}
         </div>
@@ -541,4 +496,3 @@ export default function TasksTab() {
     </div>
   );
 }
-

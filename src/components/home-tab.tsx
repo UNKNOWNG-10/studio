@@ -16,10 +16,11 @@ import { format } from 'date-fns';
 import Image from 'next/image';
 
 export default function HomeTab() {
-  const { user, stakeTokens, approveTransaction, rejectTransaction, isAdmin, getAllTransactions } = useUser();
+  const { user, stakeTokens, approveTransaction, rejectTransaction, isAdmin, getAllTransactions, withdrawalsEnabled, withdrawTokens } = useUser();
   
   const [stakeOrderId, setStakeOrderId] = useState('');
   const [isStaking, setIsStaking] = useState(false);
+  const [isWithdrawing, setIsWithdrawing] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [isStakeDialogOpen, setStakeDialogOpen] = useState(false);
   const [isWithdrawDialogOpen, setWithdrawDialogOpen] = useState(false);
@@ -74,6 +75,24 @@ export default function HomeTab() {
     setIsStaking(false);
   };
   
+  const handleWithdraw = async () => {
+    const amount = parseFloat(withdrawAmount);
+    if (isNaN(amount) || amount <= 0) {
+      toast({ title: 'Error', description: 'Please enter a valid amount.', variant: 'destructive' });
+      return;
+    }
+    setIsWithdrawing(true);
+    const success = await withdrawTokens(amount);
+    if (success) {
+        toast({ title: 'Request Sent', description: 'Your withdrawal request is pending admin approval.' });
+        setWithdrawAmount('');
+        setWithdrawDialogOpen(false);
+    } else {
+        toast({ title: 'Error', description: 'Withdrawal failed. Check your balance and minimum withdrawal amount.', variant: 'destructive' });
+    }
+    setIsWithdrawing(false);
+  };
+
   const handleApprove = (txId: string, uid: string) => {
     approveTransaction(txId, uid);
     toast({ title: 'Success', description: 'Transaction approved.'});
@@ -170,11 +189,13 @@ export default function HomeTab() {
             
             <Dialog open={isWithdrawDialogOpen} onOpenChange={setWithdrawDialogOpen}>
               <DialogTrigger asChild>
-                <Button variant="outline" className="w-full" size="lg">Withdraw</Button>
+                <Button variant="outline" className="w-full" size="lg" disabled={!withdrawalsEnabled}>
+                  {withdrawalsEnabled ? 'Withdraw' : 'Withdraw (Coming Soon)'}
+                </Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Withdraw Pika Tokens (Coming Soon)</DialogTitle>
+                  <DialogTitle>Withdraw Pika Tokens {withdrawalsEnabled ? '' : '(Coming Soon)'}</DialogTitle>
                   <DialogDescription>
                     Convert your Pika Tokens to USDT. Rate: 10,000 Pika Tokens = 1 USDT. Minimum withdrawal is 100,000 tokens. Your withdrawal will be processed after admin approval.
                   </DialogDescription>
@@ -187,7 +208,10 @@ export default function HomeTab() {
                     {withdrawAmount && <p className="font-semibold text-center text-lg">You will receive: <span className="text-primary">{(parseFloat(withdrawAmount || '0') * tokenToUsdtRate).toFixed(4)} USDT</span></p>}
                 </div>
                 <DialogFooter>
-                    <Button disabled>Request Withdraw</Button>
+                    <Button onClick={handleWithdraw} disabled={isWithdrawing || !withdrawalsEnabled}>
+                        {isWithdrawing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Request Withdraw
+                    </Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>

@@ -57,11 +57,13 @@ interface UserContextType {
   loginBgUrl: string;
   mainBgUrl: string;
   adminNotes: string;
+  withdrawalsEnabled: boolean;
+  setWithdrawalsEnabled: (enabled: boolean) => void;
   login: (uid: string) => void;
   logout: () => void;
   updateTokenBalance: (amount: number) => void;
   stakeTokens: (orderId: string) => Promise<boolean>;
-  withdrawTokens: (amount: number) => boolean;
+  withdrawTokens: (amount: number) => Promise<boolean>;
   claimTaskReward: (taskId: string, submission?: string) => Promise<boolean>;
   claimReferralMilestone: (milestoneId: number) => Promise<boolean>;
   addTask: (task: Omit<Task, 'id' | 'icon'>) => void;
@@ -113,6 +115,7 @@ const UserProviderContent = ({ children }: { children: ReactNode }) => {
   const [loginBgUrl, setLoginBgUrl] = useState('');
   const [mainBgUrl, setMainBgUrl] = useState('');
   const [adminNotes, setAdminNotes] = useState('');
+  const [withdrawalsEnabled, setWithdrawalsEnabled] = useState(false);
 
   const searchParams = useSearchParams();
   const ref = searchParams.get('ref');
@@ -152,6 +155,10 @@ const UserProviderContent = ({ children }: { children: ReactNode }) => {
       const storedAdminNotes = localStorage.getItem('pikaAdminNotes');
       if (storedAdminNotes) setAdminNotes(storedAdminNotes);
 
+      const storedWithdrawalStatus = localStorage.getItem('pikaWithdrawalsEnabled');
+      if (storedWithdrawalStatus) setWithdrawalsEnabled(JSON.parse(storedWithdrawalStatus));
+
+
     } catch (error) {
       console.error("Failed to parse from localStorage", error);
       localStorage.removeItem('pikaTokenUsers');
@@ -161,6 +168,7 @@ const UserProviderContent = ({ children }: { children: ReactNode }) => {
       localStorage.removeItem('pikaLoginBgUrl');
       localStorage.removeItem('pikaMainBgUrl');
       localStorage.removeItem('pikaAdminNotes');
+      localStorage.removeItem('pikaWithdrawalsEnabled');
     } finally {
       setLoading(false);
     }
@@ -309,8 +317,8 @@ const UserProviderContent = ({ children }: { children: ReactNode }) => {
     return true;
   };
   
-  const withdrawTokens = (amount: number): boolean => {
-    if (!user || user.tokenBalance < amount || amount < MINIMUM_WITHDRAWAL_AMOUNT) return false;
+  const withdrawTokens = async (amount: number): Promise<boolean> => {
+    if (!user || !withdrawalsEnabled || user.tokenBalance < amount || amount < MINIMUM_WITHDRAWAL_AMOUNT) return false;
     
     const newTransaction: Transaction = {
       id: `tx_withdraw_${Date.now()}`,
@@ -370,7 +378,7 @@ const UserProviderContent = ({ children }: { children: ReactNode }) => {
             }
             allUsers[referrer.uid] = referrer;
         }
-    } else if (tx.type === 'task_submission') {
+    } else if (tx.type === 'task_submission' || tx.type === 'withdraw') {
         updatedUser = {
             ...updatedUser,
             tokenBalance: updatedUser.tokenBalance + tx.amount
@@ -378,7 +386,7 @@ const UserProviderContent = ({ children }: { children: ReactNode }) => {
     }
     
     const updatedTransactions = updatedUser.transactions.map(t => 
-      t.id === transactionId ? { ...t, status: 'approved' as const, description: t.description.replace('Submission', 'Approved') } : t
+      t.id === transactionId ? { ...t, status: 'approved' as const, description: t.description.replace('Submission', 'Approved').replace('request', 'approved') } : t
     );
 
     updatedUser.transactions = updatedTransactions;
@@ -440,7 +448,7 @@ const UserProviderContent = ({ children }: { children: ReactNode }) => {
       if (lastCompleted) return false; 
       if (taskId === 'first_stake' && user.stakedBalance <= 0) return false; 
     } else {
-       const cooldown = taskId === 'watch_ad' ? 5 * 1000 : 60 * 1000;
+       const cooldown = 60 * 1000;
        if (lastCompleted && now.getTime() - new Date(lastCompleted).getTime() < cooldown) {
          return false;
        }
@@ -582,9 +590,16 @@ const UserProviderContent = ({ children }: { children: ReactNode }) => {
     setAdminNotes(notes);
     localStorage.setItem('pikaAdminNotes', notes);
   };
+  
+  const updateWithdrawalStatus = (enabled: boolean) => {
+    if (!user || !user.isAdmin) return;
+    setWithdrawalsEnabled(enabled);
+    localStorage.setItem('pikaWithdrawalsEnabled', JSON.stringify(enabled));
+  };
+
 
   return (
-    <UserContext.Provider value={{ user, loading, isAdmin: user?.isAdmin || false, tasks, referralMilestones, login, logout, updateTokenBalance, stakeTokens, withdrawTokens, claimTaskReward, claimReferralMilestone, addTask, editTask, deleteTask, approveTransaction, rejectTransaction, getAllTransactions, getAllUsers, loginIconUrl, loginBgUrl, mainBgUrl, adminNotes, updateLoginIconUrl, updateLoginBgUrl, updateMainBgUrl, updateAdminNotes }}>
+    <UserContext.Provider value={{ user, loading, isAdmin: user?.isAdmin || false, tasks, referralMilestones, login, logout, updateTokenBalance, stakeTokens, withdrawTokens, claimTaskReward, claimReferralMilestone, addTask, editTask, deleteTask, approveTransaction, rejectTransaction, getAllTransactions, getAllUsers, loginIconUrl, loginBgUrl, mainBgUrl, adminNotes, updateLoginIconUrl, updateLoginBgUrl, updateMainBgUrl, updateAdminNotes, withdrawalsEnabled, setWithdrawalsEnabled: updateWithdrawalStatus }}>
       {children}
     </UserContext.Provider>
   );
