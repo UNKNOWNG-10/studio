@@ -31,7 +31,7 @@ export default function ContactPage() {
                 </CardHeader>
                 <CardContent>
                     <p>For general questions, announcements, and community discussions, our Telegram channel is the place to be.</p>
-                    <a href="https://t.me/pikatoken_io" target="_blank" rel="noopener noreferrer">
+                    <a href="https://t.me/pika_io" target="_blank" rel="noopener noreferrer">
                         <Button className="mt-4">Join Telegram</Button>
                     </a>
                 </CardContent>
@@ -43,7 +43,7 @@ export default function ContactPage() {
                 </CardHeader>
                 <CardContent>
                     <p>Stay up-to-date with the latest news and updates by following our official X account.</p>
-                    <a href="https://x.com/Pika_Token_io" target="_blank" rel="noopener noreferrer">
+                    <a href="https://x.com/Pika_io" target="_blank" rel="noopener noreferrer">
                         <Button className="mt-4">Follow on X</Button>
                     </a>
                 </CardContent>
@@ -55,7 +55,7 @@ export default function ContactPage() {
                 </CardHeader>
                 <CardContent>
                     <p>For specific inquiries or partnership proposals, you can reach out to us via email.</p>
-                     <p className="font-semibold mt-2">support@pikatoken.io</p>
+                     <p className="font-semibold mt-2">support@pika.io</p>
                 </CardContent>
             </Card>
           </div>

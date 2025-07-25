@@ -80,8 +80,8 @@ interface UserContextType {
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
 const initialTasks: Task[] = [
-  { id: 'follow_twitter', title: 'Follow us on X (Twitter)', reward: 500, icon: 'Twitter', url: 'https://x.com/Pika_Token_io' },
-  { id: 'join_telegram', title: 'Join our Telegram Channel', reward: 500, icon: 'Send', url: 'https://t.me/pikatoken_io' },
+  { id: 'follow_twitter', title: 'Follow us on X (Twitter)', reward: 500, icon: 'Twitter', url: 'https://x.com/Pika_io' },
+  { id: 'join_telegram', title: 'Join our Telegram Channel', reward: 500, icon: 'Send', url: 'https://t.me/pika_io' },
   { id: 'first_stake', title: 'Make your first stake', reward: 1000, icon: 'Gift' },
   { id: 'watch_ad', title: 'Watch an Ad', reward: 100, icon: 'Tv', htmlContent: '<p>This is a sample ad. Watch for 10 seconds!</p>' },
   { id: 'submit_tweet', title: 'Tweet about Pika Token', reward: 1500, icon: 'Twitter', requiresApproval: true },
