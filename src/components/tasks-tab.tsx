@@ -318,9 +318,6 @@ const TaskCard = ({ task }: { task: Task }) => {
           <div className="py-4 space-y-4">
               <div className="p-4 border rounded-lg min-h-[200px]" dangerouslySetInnerHTML={{ __html: task.htmlContent || '' }} />
           </div>
-          <DialogFooter>
-              <Button onClick={() => setIsAdViewerOpen(false)}>Close Viewer</Button>
-          </DialogFooter>
         </DialogContent>
     </Dialog>
     
@@ -544,3 +541,4 @@ export default function TasksTab() {
     </div>
   );
 }
+
