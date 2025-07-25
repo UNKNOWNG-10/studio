@@ -1,0 +1,13 @@
+
+{
+  "hosting": {
+    "source": ".",
+    "site": "pika-token",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "appAssociation": "AUTO"
+  }
+}
