@@ -38,5 +38,3 @@ To deploy your application, run the following command from your project's root d
 ```bash
 firebase deploy
 ```
-
-This will build your Next.js application for production and deploy it to Firebase Hosting.
