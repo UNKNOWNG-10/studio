@@ -103,7 +103,7 @@ const referralMilestones: ReferralMilestone[] = [
 ];
 
 const ADMIN_UID = "admin_user_123";
-const FIVE_MINUTE_EARNING_RATE_PER_STAKE = 15;
+const FIVE_MINUTE_EARNING_RATE_PER_STAKE = 180;
 const MAX_STAKES = 10;
 const MINIMUM_WITHDRAWAL_AMOUNT = 100000;
 const ONE_TIME_TASKS = ['first_stake', 'submit_tweet'];
@@ -453,7 +453,7 @@ const UserProviderContent = ({ children }: { children: ReactNode }) => {
     const lastCompleted = user.tasksCompleted[taskId];
     const now = new Date();
     
-    const isOneTime = ONE_TIME_TASKS.includes(taskId) || task.requiresApproval;
+    const isOneTime = ONE_TIME_TASKS.includes(taskId) || task.requiresApproval || task.cooldown === 0;
 
     if (isOneTime) {
       if (lastCompleted) return false; 
@@ -630,4 +630,5 @@ export const useUser = () => {
   return context;
 };
 
+    
     

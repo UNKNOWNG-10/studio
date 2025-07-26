@@ -41,6 +41,7 @@ const TaskCard = ({ task }: { task: Task }) => {
   const [submission, setSubmission] = useState('');
   const [isSubmitDialogOpen, setIsSubmitDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isAdDialogOpen, setIsAdDialogOpen] = useState(false);
 
   // Edit states
   const [editedTitle, setEditedTitle] = useState(task.title);
@@ -63,12 +64,12 @@ const TaskCard = ({ task }: { task: Task }) => {
     (tx) => tx.taskId === task.id && tx.status === 'pending'
   );
 
-  const isOneTimeTask = ONE_TIME_TASKS.includes(task.id) || task.cooldown === 0;
+  const isOneTimeTask = ONE_TIME_TASKS.includes(task.id) || task.requiresApproval || task.cooldown === 0;
   
   const cooldownMs = (task.cooldown || 60) * 1000;
 
   useEffect(() => {
-    if (isOneTimeTask || !lastCompleted || task.requiresApproval) {
+    if (isOneTimeTask || !lastCompleted) {
       setTimeLeft(0);
       return;
     }
@@ -125,7 +126,10 @@ const TaskCard = ({ task }: { task: Task }) => {
         localStorage.setItem(`visited_${task.id}`, 'true');
         setHasVisitedLink(true);
       }
-    } else if (task.requiresApproval) {
+    } else if (task.htmlContent) {
+      setIsAdDialogOpen(true);
+    }
+    else if (task.requiresApproval) {
       setIsSubmitDialogOpen(true);
     } else {
       handleClaim();
@@ -174,6 +178,9 @@ const TaskCard = ({ task }: { task: Task }) => {
   } else if (task.url) {
     buttonText = 'Go to Link';
     isButtonDisabled = false; // Always allow clicking the link
+  } else if (task.htmlContent) {
+    buttonText = 'View Content';
+    isButtonDisabled = false; // Always allow viewing
   }
   else if (isClaiming) {
     buttonText = ''; // Loader will be shown
@@ -187,9 +194,9 @@ const TaskCard = ({ task }: { task: Task }) => {
     buttonText = isCompletedOnce ? 'Claim Again' : 'Claim Reward';
   }
 
-  // A separate claim button for tasks with URLs
-  const showClaimButton = task.url && hasVisitedLink;
-  const canClaimUrlTask = showClaimButton && timeLeft <= 0 && !isCompletedOnce && !isClaiming;
+  // A separate claim button for tasks with URLs or HTML content
+  const showClaimButton = (task.url && hasVisitedLink) || (task.htmlContent);
+  const canClaimUrlTask = showClaimButton && timeLeft <= 0 && (!isOneTimeTask || !isCompletedOnce) && !isClaiming;
 
 
   return (
@@ -233,11 +240,10 @@ const TaskCard = ({ task }: { task: Task }) => {
            <Button
               className="w-full"
               onClick={handleAction}
-              disabled={task.url ? isClaiming : isButtonDisabled}
+              disabled={(task.url || task.htmlContent) ? isClaiming : isButtonDisabled}
             >
-              {isClaiming && task.url ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              {isClaiming && !task.url ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              {isCompletedOnce && !pendingTransaction && isOneTimeTask && !task.url && <Check className="mr-2 h-4 w-4" />}
+              {isClaiming && !task.requiresApproval ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              {isCompletedOnce && !pendingTransaction && isOneTimeTask && !task.url && !task.htmlContent && <Check className="mr-2 h-4 w-4" />}
               {buttonText}
            </Button>
            {showClaimButton && (
@@ -247,7 +253,7 @@ const TaskCard = ({ task }: { task: Task }) => {
                 disabled={!canClaimUrlTask}
               >
                 {isClaiming && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {isCompletedOnce ? <><Check className="mr-2 h-4 w-4"/> Completed</> : 'Claim'}
+                {isCompletedOnce && isOneTimeTask ? <><Check className="mr-2 h-4 w-4"/> Completed</> : timeLeft > 0 ? `Next in ${formatTime(timeLeft)}` : 'Claim'}
              </Button>
            )}
         </div>
@@ -283,6 +289,20 @@ const TaskCard = ({ task }: { task: Task }) => {
         </DialogContent>
     </Dialog>
 
+    {/* Ad Content Dialog */}
+    <Dialog open={isAdDialogOpen} onOpenChange={setIsAdDialogOpen}>
+      <DialogContent>
+          <DialogHeader>
+              <DialogTitle>{task.title}</DialogTitle>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+            <div dangerouslySetInnerHTML={{ __html: task.htmlContent || '' }} />
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setIsAdDialogOpen(false)}>Close</Button>
+          </DialogFooter>
+      </DialogContent>
+    </Dialog>
     
     {/* Admin Edit Dialog */}
     <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
@@ -300,15 +320,13 @@ const TaskCard = ({ task }: { task: Task }) => {
                   <Input id="editTaskReward" type="number" value={editedReward} onChange={(e) => setEditedReward(e.target.value)} />
                 </div>
                 <div>
-                  <Label htmlFor="editTaskCooldown">Cooldown (seconds)</Label>
+                  <Label htmlFor="editTaskCooldown">Cooldown (seconds, 0 for one-time)</Label>
                   <Input id="editTaskCooldown" type="number" value={editedCooldown} onChange={(e) => setEditedCooldown(e.target.value)} />
                 </div>
-                {(task.id.includes('twitter') || task.id.includes('telegram') || task.url) && (
-                  <div>
-                    <Label htmlFor="editTaskUrl">URL</Label>
-                    <Input id="editTaskUrl" value={editedUrl} onChange={(e) => setEditedUrl(e.target.value)} />
-                  </div>
-                )}
+                <div>
+                  <Label htmlFor="editTaskUrl">URL (for link-based tasks)</Label>
+                  <Input id="editTaskUrl" value={editedUrl} onChange={(e) => setEditedUrl(e.target.value)} />
+                </div>
                  <div>
                   <Label htmlFor="editTaskHtml">HTML Content / Ad Code</Label>
                   <Textarea 
@@ -513,4 +531,5 @@ export default function TasksTab() {
   );
 }
 
+    
     

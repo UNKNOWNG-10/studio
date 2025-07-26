@@ -18,7 +18,7 @@ import { Progress } from '@/components/ui/progress';
 
 
 const MAX_STAKES = 10;
-const EARNING_RATE_PER_STAKE = 15;
+const EARNING_RATE_PER_STAKE = 180;
 
 export default function HomeTab() {
   const { user, stakeTokens, approveTransaction, rejectTransaction, isAdmin, getAllTransactions, withdrawalsEnabled, withdrawTokens } = useUser();
@@ -109,7 +109,7 @@ export default function HomeTab() {
   }
 
   const hourlyEarning = user ? (EARNING_RATE_PER_STAKE * user.stakeCount * 12) : 0;
-  const tokenToUsdtRate = 0.0001;
+  const tokenToUsdtRate = 5 / 10000;
 
   const getOrderId = (description: string) => {
     const match = description.match(/Order ID: (.*)/);
@@ -213,7 +213,7 @@ export default function HomeTab() {
                 <DialogHeader>
                   <DialogTitle>Withdraw Pika Tokens {withdrawalsEnabled ? '' : '(Coming Soon)'}</DialogTitle>
                   <DialogDescription>
-                    Convert your Pika Tokens to USDT. Rate: 10,000 Pika Tokens = 1 USDT. Minimum withdrawal is 100,000 tokens. Your withdrawal will be processed after admin approval.
+                    Convert your Pika Tokens to USDT. Rate: 10,000 Pika Tokens = 5 USDT. Minimum withdrawal is 100,000 tokens. Your withdrawal will be processed after admin approval.
                   </DialogDescription>
                 </DialogHeader>
                 <div className="py-4 space-y-4">
@@ -263,7 +263,7 @@ export default function HomeTab() {
                       <Badge variant={
                         tx.type === 'stake' ? 'default' : 
                         tx.type === 'withdraw' ? 'secondary' :
-                        tx.type === 'task' || tx.type === 'earning' || tx.type === 'referral_bonus' || tx.type === 'login_bonus' || tx.type === 'task_submission' ? 'outline' :
+                        tx.type === 'task' || tx.type === 'earning' || tx.type === 'referral_bonus' || tx.type === 'login_bonus' || tx.type === 'referral_milestone' || tx.type === 'task_submission' ? 'outline' :
                         'default'
                       } className="capitalize">{tx.type.replace('_', ' ')}</Badge>
                     </TableCell>
@@ -311,4 +311,5 @@ export default function HomeTab() {
   );
 }
 
+    
     
