@@ -41,7 +41,6 @@ const TaskCard = ({ task }: { task: Task }) => {
   const [submission, setSubmission] = useState('');
   const [isSubmitDialogOpen, setIsSubmitDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [isAdDialogOpen, setIsAdDialogOpen] = useState(false);
 
   // Edit states
   const [editedTitle, setEditedTitle] = useState(task.title);
@@ -91,9 +90,6 @@ const TaskCard = ({ task }: { task: Task }) => {
       if (!task.requiresApproval) {
         toast({ title: "Reward Claimed!", description: `You received ${task.reward.toLocaleString()} Pika Tokens.` });
       }
-      if (task.htmlContent) {
-        setIsAdDialogOpen(false);
-      }
     } else {
       let description = "Please wait for the timer to finish.";
       if (isOneTimeTask) {
@@ -129,8 +125,6 @@ const TaskCard = ({ task }: { task: Task }) => {
         localStorage.setItem(`visited_${task.id}`, 'true');
         setHasVisitedLink(true);
       }
-    } else if (task.htmlContent) {
-      setIsAdDialogOpen(true);
     } else if (task.requiresApproval) {
       setIsSubmitDialogOpen(true);
     } else {
@@ -177,9 +171,6 @@ const TaskCard = ({ task }: { task: Task }) => {
   } else if (task.requiresApproval) {
      buttonText = 'Submit for Approval';
      isButtonDisabled = isClaiming || isCompletedOnce;
-  } else if (task.htmlContent) {
-    buttonText = 'Watch Ad';
-    isButtonDisabled = isClaiming || (timeLeft > 0);
   } else if (task.url) {
     buttonText = 'Go to Link';
     isButtonDisabled = false; // Always allow clicking the link
@@ -262,26 +253,6 @@ const TaskCard = ({ task }: { task: Task }) => {
         </div>
       </CardFooter>
     </Card>
-
-    {/* Ad Dialog */}
-    {task.htmlContent && (
-        <Dialog open={isAdDialogOpen} onOpenChange={setIsAdDialogOpen}>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>{task.title}</DialogTitle>
-                </DialogHeader>
-                <div className="py-4 space-y-4">
-                    <div dangerouslySetInnerHTML={{ __html: task.htmlContent }} />
-                </div>
-                <DialogFooter>
-                    <Button onClick={handleClaim} disabled={isClaiming || timeLeft > 0}>
-                        {isClaiming && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        {timeLeft > 0 ? <><Clock className="mr-2 h-4 w-4"/> {formatTime(timeLeft)} </> : 'Claim Reward'}
-                    </Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
-    )}
 
     {/* User submission dialog */}
     <Dialog open={isSubmitDialogOpen} onOpenChange={setIsSubmitDialogOpen}>
@@ -374,12 +345,7 @@ const AdminUserDetailsPanel = () => {
     }, 0);
 
     const totalReferrals = usersData.reduce((acc, user) => acc + (user.referrals?.length || 0), 0);
-
-    const adsWatched = usersData.reduce((acc, user) => {
-        const adWatches = user.transactions.filter(tx => tx.taskId === 'watch_ad').length;
-        return acc + adWatches;
-    }, 0);
-
+    
     const handleSaveNotes = () => {
         updateAdminNotes(notes);
         toast({ title: 'Notes Saved', description: 'Your notes have been updated.' });
@@ -412,13 +378,6 @@ const AdminUserDetailsPanel = () => {
                         <span className="font-medium">Total Referrals</span>
                     </div>
                     <span className="font-bold text-lg">{totalReferrals}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <Eye className="h-5 w-5 text-muted-foreground" />
-                        <span className="font-medium">Ads Watched</span>
-                    </div>
-                    <span className="font-bold text-lg">{adsWatched}</span>
                 </div>
                 <div className="space-y-2 pt-4">
                      <Label htmlFor="adminNotes" className="flex items-center gap-2 text-base"><MessageSquare className="h-5 w-5" />User View Opinion</Label>
@@ -553,3 +512,5 @@ export default function TasksTab() {
     </div>
   );
 }
+
+    

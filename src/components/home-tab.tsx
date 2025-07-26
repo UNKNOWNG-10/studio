@@ -14,6 +14,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import Image from 'next/image';
+import { Progress } from '@/components/ui/progress';
+
+
+const MAX_STAKES = 10;
+const EARNING_RATE_PER_STAKE = 15;
 
 export default function HomeTab() {
   const { user, stakeTokens, approveTransaction, rejectTransaction, isAdmin, getAllTransactions, withdrawalsEnabled, withdrawTokens } = useUser();
@@ -70,7 +75,7 @@ export default function HomeTab() {
       setStakeOrderId('');
       setStakeDialogOpen(false);
     } else {
-      toast({ title: 'Error', description: 'Staking request failed. You may have already staked or have insufficient balance.', variant: 'destructive' });
+      toast({ title: 'Error', description: 'Staking request failed. You may have already reached the max stake limit or have insufficient balance.', variant: 'destructive' });
     }
     setIsStaking(false);
   };
@@ -103,7 +108,7 @@ export default function HomeTab() {
     toast({ title: 'Success', description: 'Transaction rejected.'});
   }
 
-  const hourlyEarning = (15 * 12);
+  const hourlyEarning = user ? (EARNING_RATE_PER_STAKE * user.stakeCount * 12) : 0;
   const tokenToUsdtRate = 0.0001;
 
   const getOrderId = (description: string) => {
@@ -111,19 +116,21 @@ export default function HomeTab() {
     return match ? match[1] : null;
   };
 
+  const stakeCount = user?.stakeCount || 0;
+
   return (
     <div className="w-full max-w-4xl mx-auto mt-6 space-y-8">
       <div className="space-y-8">
         <Card className="shadow-lg">
           <CardHeader>
             <CardTitle className="text-2xl font-headline">Staking Dashboard</CardTitle>
-            <CardDescription>Stake your Pika Tokens to earn hourly rewards.</CardDescription>
+            <CardDescription>Stake up to 10 times to maximize your hourly rewards.</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col items-center gap-6">
             <div className="relative w-48 h-48 sm:w-64 sm:h-64 flex items-center justify-center">
               <svg className="absolute w-full h-full" viewBox="0 0 100 100">
                 <circle cx="50" cy="50" r="45" stroke="hsl(var(--border))" strokeWidth="10" fill="none" />
-                <circle
+                 <circle
                   cx="50"
                   cy="50"
                   r="45"
@@ -131,7 +138,7 @@ export default function HomeTab() {
                   strokeWidth="10"
                   fill="none"
                   strokeDasharray="283"
-                  strokeDashoffset={user?.stakedBalance ? 0 : 283}
+                  strokeDashoffset={283 - (283 * stakeCount) / MAX_STAKES}
                   transform="rotate(-90 50 50)"
                   className="transition-all duration-1000"
                 />
@@ -146,6 +153,15 @@ export default function HomeTab() {
                 </p>
               </div>
             </div>
+
+            <div className="w-full max-w-sm space-y-2">
+                <div className="flex justify-between text-sm text-muted-foreground">
+                    <span>Stake Level</span>
+                    <span>{stakeCount} / {MAX_STAKES}</span>
+                </div>
+                <Progress value={(stakeCount / MAX_STAKES) * 100} className="h-2" />
+            </div>
+
              {user?.stakedBalance && user.stakedBalance > 0 && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Clock className="h-4 w-4 animate-spin" />
@@ -156,15 +172,15 @@ export default function HomeTab() {
           <CardFooter className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Dialog open={isStakeDialogOpen} onOpenChange={setStakeDialogOpen}>
               <DialogTrigger asChild>
-                <Button className="w-full" size="lg" disabled={user?.hasStaked}>
-                  {user?.hasStaked ? 'Already Staked' : 'Stake Pika Tokens'}
+                <Button className="w-full" size="lg" disabled={user?.stakeCount >= MAX_STAKES}>
+                  {user?.stakeCount >= MAX_STAKES ? 'Max Stakes Reached' : 'Stake More Tokens'}
                   </Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Stake 1000 Pika Tokens</DialogTitle>
+                  <DialogTitle>Stake 1,000 Pika Tokens</DialogTitle>
                   <DialogDescription>
-                    To stake, please send 0.05 USDT to the Binance ID below and enter your order ID to confirm your one-time stake of 1000 Pika Tokens. Your stake will be active after admin approval.
+                    To stake, please send 0.05 USDT to the Binance ID below and enter your order ID to confirm your stake. Each stake increases your reward level.
                   </DialogDescription>
                 </DialogHeader>
                 <div className="py-4 space-y-4">
@@ -190,7 +206,7 @@ export default function HomeTab() {
             <Dialog open={isWithdrawDialogOpen} onOpenChange={setWithdrawDialogOpen}>
               <DialogTrigger asChild>
                 <Button variant="outline" className="w-full" size="lg" disabled={!withdrawalsEnabled}>
-                  {withdrawalsEnabled ? 'Withdraw' : 'Withdraw (Coming Soon)'}
+                  {withdrawalsEnabled ? 'Withdraw' : 'Withdrawals Disabled'}
                 </Button>
               </DialogTrigger>
               <DialogContent>
@@ -294,3 +310,5 @@ export default function HomeTab() {
     </div>
   );
 }
+
+    

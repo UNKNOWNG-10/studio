@@ -32,7 +32,7 @@ export interface User {
   isAdmin: boolean;
   tokenBalance: number;
   stakedBalance: number;
-  hasStaked: boolean; 
+  stakeCount: number; 
   tasksCompleted: { [key: string]: string };
   transactions: Transaction[];
   lastPayoutTime?: string;
@@ -87,7 +87,6 @@ const initialTasks: Task[] = [
   { id: 'join_telegram', title: 'Join our Telegram Channel', reward: 500, icon: 'Send', url: 'https://t.me/pika_io', cooldown: 86400, },
   { id: 'first_stake', title: 'Make your first stake', reward: 1000, icon: 'Gift', cooldown: 0 },
   { id: 'submit_tweet', title: 'Tweet about Pika Token', reward: 1500, icon: 'Twitter', requiresApproval: true, cooldown: 0 },
-  { id: 'watch_ad', title: 'Watch an Ad', reward: 100, icon: 'Tv', htmlContent: '<p class="text-center">Your ad code here. Edit this in the admin task editor.</p>', cooldown: 60},
 ];
 
 const referralMilestones: ReferralMilestone[] = [
@@ -104,7 +103,8 @@ const referralMilestones: ReferralMilestone[] = [
 ];
 
 const ADMIN_UID = "admin_user_123";
-const FIVE_MINUTE_EARNING_RATE = 15;
+const FIVE_MINUTE_EARNING_RATE_PER_STAKE = 15;
+const MAX_STAKES = 10;
 const MINIMUM_WITHDRAWAL_AMOUNT = 100000;
 const ONE_TIME_TASKS = ['first_stake', 'submit_tweet'];
 
@@ -202,7 +202,7 @@ const UserProviderContent = ({ children }: { children: ReactNode }) => {
   
         if (minutesDiff >= 5) {
           const intervalsToPay = Math.floor(minutesDiff / 5);
-          const earnings = FIVE_MINUTE_EARNING_RATE * intervalsToPay;
+          const earnings = (FIVE_MINUTE_EARNING_RATE_PER_STAKE * currentUser.stakeCount) * intervalsToPay;
           const newLastPayoutTime = new Date(lastPayout.getTime() + intervalsToPay * 5 * 60 * 1000);
           
           const newTransaction: Transaction = {
@@ -278,7 +278,7 @@ const UserProviderContent = ({ children }: { children: ReactNode }) => {
       isAdmin: isAdminLogin,
       tokenBalance: 1000,
       stakedBalance: 0,
-      hasStaked: false,
+      stakeCount: 0,
       tasksCompleted: {},
       transactions: [newTransaction],
       lastPayoutTime: new Date().toISOString(),
@@ -305,7 +305,7 @@ const UserProviderContent = ({ children }: { children: ReactNode }) => {
   };
   
   const stakeTokens = async (orderId: string): Promise<boolean> => {
-    if (!user || user.hasStaked) return false;
+    if (!user || user.stakeCount >= MAX_STAKES) return false;
     const stakeAmount = 1000;
     if (user.tokenBalance < stakeAmount) return false;
 
@@ -314,7 +314,7 @@ const UserProviderContent = ({ children }: { children: ReactNode }) => {
       type: 'stake',
       amount: stakeAmount,
       date: new Date().toISOString(),
-      description: `Stake request with Order ID: ${orderId}`,
+      description: `Stake #${user.stakeCount + 1} request with Order ID: ${orderId}`,
       status: 'pending'
     };
 
@@ -361,15 +361,16 @@ const UserProviderContent = ({ children }: { children: ReactNode }) => {
     let updatedUser = { ...targetUser };
 
     if (tx.type === 'stake') {
+        const isFirstStake = updatedUser.stakeCount === 0;
         updatedUser = {
             ...updatedUser,
             stakedBalance: updatedUser.stakedBalance + tx.amount,
-            hasStaked: true,
+            stakeCount: updatedUser.stakeCount + 1,
             lastPayoutTime: new Date().toISOString()
         };
 
-        // Referral logic
-        if (updatedUser.referrerId && allUsers[updatedUser.referrerId]) {
+        // Referral logic only on first stake
+        if (isFirstStake && updatedUser.referrerId && allUsers[updatedUser.referrerId]) {
             let referrer = allUsers[updatedUser.referrerId];
             const referralBonus = 300;
             const bonusTransaction: Transaction = {
@@ -628,3 +629,5 @@ export const useUser = () => {
   }
   return context;
 };
+
+    
