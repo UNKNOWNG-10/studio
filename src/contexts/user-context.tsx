@@ -124,20 +124,36 @@ const UserProviderContent = ({ children }: { children: ReactNode }) => {
     try {
       const storedUsers = localStorage.getItem('pikaTokenUsers');
       if (storedUsers) {
-        setUsers(JSON.parse(storedUsers));
+        try {
+          setUsers(JSON.parse(storedUsers));
+        } catch (e) {
+          console.error("Failed to parse users from localStorage", e);
+          localStorage.removeItem('pikaTokenUsers');
+        }
       }
 
       const deviceUser = localStorage.getItem('pikaTokenDeviceUser');
       if (deviceUser && storedUsers) {
-        const allUsers = JSON.parse(storedUsers);
-        if (allUsers[deviceUser]) {
-          setUser(allUsers[deviceUser]);
+        try {
+          const allUsers = JSON.parse(storedUsers);
+          if (allUsers[deviceUser]) {
+            setUser(allUsers[deviceUser]);
+          }
+        } catch (e) {
+           console.error("Failed to parse device user from localStorage", e);
+           localStorage.removeItem('pikaTokenUsers');
+           localStorage.removeItem('pikaTokenDeviceUser');
         }
       }
 
       const storedTasks = localStorage.getItem('pikaTokenTasks');
       if (storedTasks) {
-        setTasks(JSON.parse(storedTasks));
+        try {
+          setTasks(JSON.parse(storedTasks));
+        } catch (e) {
+          console.error("Failed to parse tasks from localStorage", e);
+          localStorage.removeItem('pikaTokenTasks');
+        }
       } else {
         setTasks(initialTasks);
         localStorage.setItem('pikaTokenTasks', JSON.stringify(initialTasks));
@@ -156,19 +172,18 @@ const UserProviderContent = ({ children }: { children: ReactNode }) => {
       if (storedAdminNotes) setAdminNotes(storedAdminNotes);
 
       const storedWithdrawalStatus = localStorage.getItem('pikaWithdrawalsEnabled');
-      if (storedWithdrawalStatus) setWithdrawalsEnabled(JSON.parse(storedWithdrawalStatus));
+      if (storedWithdrawalStatus) {
+        try {
+          setWithdrawalsEnabled(JSON.parse(storedWithdrawalStatus));
+        } catch (e) {
+          console.error("Failed to parse withdrawal status from localStorage", e);
+          localStorage.removeItem('pikaWithdrawalsEnabled');
+        }
+      }
 
 
     } catch (error) {
-      console.error("Failed to parse from localStorage", error);
-      localStorage.removeItem('pikaTokenUsers');
-      localStorage.removeItem('pikaTokenTasks');
-      localStorage.removeItem('pikaTokenDeviceUser');
-      localStorage.removeItem('pikaLoginIconUrl');
-      localStorage.removeItem('pikaLoginBgUrl');
-      localStorage.removeItem('pikaMainBgUrl');
-      localStorage.removeItem('pikaAdminNotes');
-      localStorage.removeItem('pikaWithdrawalsEnabled');
+      console.error("An unexpected error occurred during initialization", error);
     } finally {
       setLoading(false);
     }
