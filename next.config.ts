@@ -1,5 +1,7 @@
 import type {NextConfig} from 'next';
 
+const isGithubActions = process.env.GITHUB_ACTIONS === 'true';
+
 const nextConfig: NextConfig = {
   /* config options here */
   typescript: {
@@ -20,6 +22,7 @@ const nextConfig: NextConfig = {
     unoptimized: true,
   },
   output: 'export',
+  basePath: isGithubActions ? '/pika-token' : '',
 };
 
 export default nextConfig;
