@@ -124,11 +124,13 @@ const TaskCard = ({ task }: { task: Task }) => {
 
   const handleAction = () => {
     if (task.htmlContent) {
-        setIsAdDialogOpen(true);
-    } else if (task.url && !hasVisitedLink) {
+      setIsAdDialogOpen(true);
+    } else if (task.url) {
       window.open(task.url, '_blank');
-      localStorage.setItem(`visited_${task.id}`, 'true');
-      setHasVisitedLink(true);
+      if(!hasVisitedLink) {
+        localStorage.setItem(`visited_${task.id}`, 'true');
+        setHasVisitedLink(true);
+      }
     } else if (task.requiresApproval) {
       setIsSubmitDialogOpen(true);
     } else {
@@ -178,12 +180,9 @@ const TaskCard = ({ task }: { task: Task }) => {
   } else if (task.htmlContent) {
     buttonText = 'Watch Ad';
     isButtonDisabled = isClaiming || (timeLeft > 0);
-  } else if (task.url && !hasVisitedLink && !isCompletedOnce) {
+  } else if (task.url) {
     buttonText = 'Go to Link';
-    isButtonDisabled = false;
-  } else if(task.url && hasVisitedLink && !isCompletedOnce) {
-    buttonText = 'Claim Reward';
-    isButtonDisabled = isClaiming;
+    isButtonDisabled = isClaiming || timeLeft > 0;
   }
   else if (isClaiming) {
     buttonText = ''; // Loader will be shown
@@ -195,6 +194,12 @@ const TaskCard = ({ task }: { task: Task }) => {
     buttonText = `Next in ${formatTime(timeLeft)}`;
   } else {
     buttonText = isCompletedOnce ? 'Claim Again' : 'Claim Reward';
+  }
+
+  // Override for completed tasks that require a link click
+  if (task.url && hasVisitedLink && !isCompletedOnce) {
+    buttonText = 'Claim Reward';
+    isButtonDisabled = isClaiming || timeLeft > 0;
   }
 
   return (
@@ -317,7 +322,7 @@ const TaskCard = ({ task }: { task: Task }) => {
                   <Label htmlFor="editTaskCooldown">Cooldown (seconds)</Label>
                   <Input id="editTaskCooldown" type="number" value={editedCooldown} onChange={(e) => setEditedCooldown(e.target.value)} />
                 </div>
-                {(task.id === 'follow_twitter' || task.id === 'join_telegram') && (
+                {(task.id.includes('twitter') || task.id.includes('telegram') || task.url) && (
                   <div>
                     <Label htmlFor="editTaskUrl">URL</Label>
                     <Input id="editTaskUrl" value={editedUrl} onChange={(e) => setEditedUrl(e.target.value)} />
