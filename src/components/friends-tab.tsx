@@ -56,7 +56,7 @@ const MilestoneCard = ({ milestone }: { milestone: ReferralMilestone }) => {
 
 export default function FriendsTab() {
   const { user, referralMilestones } = useUser();
-  const referralLink = user ? `https://pika-token.web.app/login?ref=${user.uid}` : '';
+  const referralLink = user ? `https://pikatoken.io/login?ref=${user.uid}` : '';
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(referralLink);
