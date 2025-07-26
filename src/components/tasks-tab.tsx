@@ -123,14 +123,14 @@ const TaskCard = ({ task }: { task: Task }) => {
   };
 
   const handleAction = () => {
-    if (task.htmlContent) {
-      setIsAdDialogOpen(true);
-    } else if (task.url) {
+    if (task.url) {
       window.open(task.url, '_blank');
       if(!hasVisitedLink) {
         localStorage.setItem(`visited_${task.id}`, 'true');
         setHasVisitedLink(true);
       }
+    } else if (task.htmlContent) {
+      setIsAdDialogOpen(true);
     } else if (task.requiresApproval) {
       setIsSubmitDialogOpen(true);
     } else {
@@ -182,7 +182,7 @@ const TaskCard = ({ task }: { task: Task }) => {
     isButtonDisabled = isClaiming || (timeLeft > 0);
   } else if (task.url) {
     buttonText = 'Go to Link';
-    isButtonDisabled = isClaiming || timeLeft > 0;
+    isButtonDisabled = false; // Always allow clicking the link
   }
   else if (isClaiming) {
     buttonText = ''; // Loader will be shown
@@ -196,11 +196,10 @@ const TaskCard = ({ task }: { task: Task }) => {
     buttonText = isCompletedOnce ? 'Claim Again' : 'Claim Reward';
   }
 
-  // Override for completed tasks that require a link click
-  if (task.url && hasVisitedLink && !isCompletedOnce) {
-    buttonText = 'Claim Reward';
-    isButtonDisabled = isClaiming || timeLeft > 0;
-  }
+  // A separate claim button for tasks with URLs
+  const showClaimButton = task.url && hasVisitedLink;
+  const canClaimUrlTask = showClaimButton && timeLeft <= 0 && !isCompletedOnce && !isClaiming;
+
 
   return (
     <>
@@ -243,12 +242,23 @@ const TaskCard = ({ task }: { task: Task }) => {
            <Button
               className="w-full"
               onClick={handleAction}
-              disabled={isButtonDisabled}
+              disabled={task.url ? isClaiming : isButtonDisabled}
             >
-              {isClaiming && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isCompletedOnce && !pendingTransaction && isOneTimeTask && <Check className="mr-2 h-4 w-4" />}
+              {isClaiming && task.url ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              {isClaiming && !task.url ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              {isCompletedOnce && !pendingTransaction && isOneTimeTask && !task.url && <Check className="mr-2 h-4 w-4" />}
               {buttonText}
            </Button>
+           {showClaimButton && (
+             <Button
+                className="w-full"
+                onClick={handleClaim}
+                disabled={!canClaimUrlTask}
+              >
+                {isClaiming && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {isCompletedOnce ? <><Check className="mr-2 h-4 w-4"/> Completed</> : 'Claim'}
+             </Button>
+           )}
         </div>
       </CardFooter>
     </Card>
