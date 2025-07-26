@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { useUser, Task, User } from '@/contexts/user-context';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Check, Gift, Twitter, Send, Tv, PlusCircle, Tag, Trophy, Loader2, ExternalLink, Trash2, Edit, Users, BarChart2, Repeat, Eye, MessageSquare, Save } from 'lucide-react';
+import { Check, Gift, Twitter, Send, Tv, PlusCircle, Tag, Trophy, Loader2, ExternalLink, Trash2, Edit, Users, BarChart2, Repeat, Eye, MessageSquare, Save, Clock } from 'lucide-react';
 import Image from 'next/image';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -32,7 +32,7 @@ const getIcon = (iconName?: string) => {
     return <Tag className="h-6 w-6 text-gray-500" />;
 }
 
-const ONE_TIME_TASKS = ['follow_twitter', 'join_telegram', 'first_stake', 'submit_tweet'];
+const ONE_TIME_TASKS = ['first_stake', 'submit_tweet'];
 
 const TaskCard = ({ task }: { task: Task }) => {
   const { user, claimTaskReward, isAdmin, deleteTask, editTask } = useUser();
@@ -41,15 +41,17 @@ const TaskCard = ({ task }: { task: Task }) => {
   const [submission, setSubmission] = useState('');
   const [isSubmitDialogOpen, setIsSubmitDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isAdDialogOpen, setIsAdDialogOpen] = useState(false);
 
   // Edit states
   const [editedTitle, setEditedTitle] = useState(task.title);
   const [editedReward, setEditedReward] = useState(task.reward.toString());
   const [editedUrl, setEditedUrl] = useState(task.url || '');
   const [editedHtml, setEditedHtml] = useState(task.htmlContent || '');
+  const [editedCooldown, setEditedCooldown] = useState((task.cooldown || 0).toString());
 
   const [hasVisitedLink, setHasVisitedLink] = useState(() => {
-    if (typeof window !== 'undefined') {
+    if (typeof window !== 'undefined' && task.url) {
       return localStorage.getItem(`visited_${task.id}`) === 'true';
     }
     return false;
@@ -62,9 +64,9 @@ const TaskCard = ({ task }: { task: Task }) => {
     (tx) => tx.taskId === task.id && tx.status === 'pending'
   );
 
-  const isOneTimeTask = ONE_TIME_TASKS.includes(task.id);
+  const isOneTimeTask = ONE_TIME_TASKS.includes(task.id) || task.cooldown === 0;
   
-  const cooldown = 60 * 1000;
+  const cooldownMs = (task.cooldown || 60) * 1000;
 
   useEffect(() => {
     if (isOneTimeTask || !lastCompleted || task.requiresApproval) {
@@ -74,13 +76,13 @@ const TaskCard = ({ task }: { task: Task }) => {
 
     const intervalId = setInterval(() => {
       const now = new Date().getTime();
-      const nextAvailableTime = new Date(lastCompleted).getTime() + cooldown;
+      const nextAvailableTime = new Date(lastCompleted).getTime() + cooldownMs;
       const newTimeLeft = Math.max(0, nextAvailableTime - now);
       setTimeLeft(newTimeLeft);
     }, 1000);
 
     return () => clearInterval(intervalId);
-  }, [lastCompleted, cooldown, task.id, isOneTimeTask, task.requiresApproval]);
+  }, [lastCompleted, cooldownMs, task.id, isOneTimeTask, task.requiresApproval]);
   
   const handleClaim = async () => {
     setIsClaiming(true);
@@ -88,6 +90,9 @@ const TaskCard = ({ task }: { task: Task }) => {
     if (success) {
       if (!task.requiresApproval) {
         toast({ title: "Reward Claimed!", description: `You received ${task.reward.toLocaleString()} Pika Tokens.` });
+      }
+      if (task.htmlContent) {
+        setIsAdDialogOpen(false);
       }
     } else {
       let description = "Please wait for the timer to finish.";
@@ -118,7 +123,9 @@ const TaskCard = ({ task }: { task: Task }) => {
   };
 
   const handleAction = () => {
-    if (task.url && !hasVisitedLink) {
+    if (task.htmlContent) {
+        setIsAdDialogOpen(true);
+    } else if (task.url && !hasVisitedLink) {
       window.open(task.url, '_blank');
       localStorage.setItem(`visited_${task.id}`, 'true');
       setHasVisitedLink(true);
@@ -131,14 +138,17 @@ const TaskCard = ({ task }: { task: Task }) => {
 
   const handleEditSave = () => {
     const reward = parseInt(editedReward, 10);
-    if (!editedTitle || isNaN(reward) || reward <= 0) {
-      toast({ title: 'Invalid Input', description: 'Please provide a valid title and a positive reward amount.', variant: 'destructive' });
+    const cooldown = parseInt(editedCooldown, 10);
+
+    if (!editedTitle || isNaN(reward) || reward <= 0 || isNaN(cooldown) || cooldown < 0) {
+      toast({ title: 'Invalid Input', description: 'Please provide a valid title, a positive reward amount, and a non-negative cooldown.', variant: 'destructive' });
       return;
     }
     const updatedTask: Task = { 
       ...task,
       title: editedTitle,
       reward,
+      cooldown,
       url: editedUrl,
       htmlContent: editedHtml,
     };
@@ -148,8 +158,9 @@ const TaskCard = ({ task }: { task: Task }) => {
   };
 
   const formatTime = (ms: number) => {
-    const seconds = Math.floor((ms / 1000) % 60);
-    const minutes = Math.floor((ms / 1000 / 60) % 60);
+    const totalSeconds = Math.floor(ms / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
     if (minutes > 0) return `${minutes}m ${seconds}s`;
     return `${seconds}s`;
   };
@@ -164,6 +175,9 @@ const TaskCard = ({ task }: { task: Task }) => {
   } else if (task.requiresApproval) {
      buttonText = 'Submit for Approval';
      isButtonDisabled = isClaiming || isCompletedOnce;
+  } else if (task.htmlContent) {
+    buttonText = 'Watch Ad';
+    isButtonDisabled = isClaiming || (timeLeft > 0);
   } else if (task.url && !hasVisitedLink && !isCompletedOnce) {
     buttonText = 'Go to Link';
     isButtonDisabled = false;
@@ -173,7 +187,7 @@ const TaskCard = ({ task }: { task: Task }) => {
   }
   else if (isClaiming) {
     buttonText = ''; // Loader will be shown
-  } else if (isOneTimeTask || task.requiresApproval) {
+  } else if (isOneTimeTask) {
     if (isCompletedOnce) {
       buttonText = 'Completed';
     }
@@ -182,8 +196,6 @@ const TaskCard = ({ task }: { task: Task }) => {
   } else {
     buttonText = isCompletedOnce ? 'Claim Again' : 'Claim Reward';
   }
-  
-  const canEdit = isAdmin && ['follow_twitter', 'join_telegram'].includes(task.id);
 
   return (
     <>
@@ -196,61 +208,65 @@ const TaskCard = ({ task }: { task: Task }) => {
         </div>
         {isAdmin && (
           <div className="ml-auto flex gap-2">
-            {canEdit && (
-              <Button variant="ghost" size="icon" onClick={() => setIsEditDialogOpen(true)}>
-                <Edit className="h-4 w-4" />
-              </Button>
-            )}
-             <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="destructive" size="icon">
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            This action cannot be undone. This will permanently delete the task.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => deleteTask(task.id)}>Delete</AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-             </AlertDialog>
+            <Button variant="ghost" size="icon" onClick={() => setIsEditDialogOpen(true)}>
+              <Edit className="h-4 w-4" />
+            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" size="icon">
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                  <AlertDialogHeader>
+                      <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                          This action cannot be undone. This will permanently delete the task.
+                      </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={() => deleteTask(task.id)}>Delete</AlertDialogAction>
+                  </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         )}
       </CardHeader>
       <CardFooter>
         <div className="w-full flex gap-2">
-           {!task.url || (task.url && hasVisitedLink) || (isCompletedOnce) ? (
-            <Button
+           <Button
               className="w-full"
               onClick={handleAction}
               disabled={isButtonDisabled}
             >
               {isClaiming && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isCompletedOnce && !pendingTransaction && (isOneTimeTask || task.requiresApproval) && <Check className="mr-2 h-4 w-4" />}
+              {isCompletedOnce && !pendingTransaction && isOneTimeTask && <Check className="mr-2 h-4 w-4" />}
               {buttonText}
-            </Button>
-           ) : (
-            <>
-                <Button
-                    className="w-full"
-                    onClick={handleAction}
-                    disabled={isCompletedOnce}
-                >
-                    <ExternalLink className="mr-2 h-4 w-4" />
-                    {buttonText}
-                </Button>
-            </>
-           )}
-
+           </Button>
         </div>
       </CardFooter>
     </Card>
+
+    {/* Ad Dialog */}
+    {task.htmlContent && (
+        <Dialog open={isAdDialogOpen} onOpenChange={setIsAdDialogOpen}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>{task.title}</DialogTitle>
+                </DialogHeader>
+                <div className="py-4 space-y-4">
+                    <div dangerouslySetInnerHTML={{ __html: task.htmlContent }} />
+                </div>
+                <DialogFooter>
+                    <Button onClick={handleClaim} disabled={isClaiming || timeLeft > 0}>
+                        {isClaiming && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        {timeLeft > 0 ? <><Clock className="mr-2 h-4 w-4"/> {formatTime(timeLeft)} </> : 'Claim Reward'}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    )}
 
     {/* User submission dialog */}
     <Dialog open={isSubmitDialogOpen} onOpenChange={setIsSubmitDialogOpen}>
@@ -283,34 +299,46 @@ const TaskCard = ({ task }: { task: Task }) => {
 
     
     {/* Admin Edit Dialog */}
-    {canEdit && (
-       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent>
-        <DialogHeader>
-            <DialogTitle>Edit Task: {task.title}</DialogTitle>
-        </DialogHeader>
-        <div className="py-4 space-y-4">
-            <div>
-              <Label htmlFor="editTaskTitle">Task Title</Label>
-              <Input id="editTaskTitle" value={editedTitle} onChange={(e) => setEditedTitle(e.target.value)} />
+    <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+                <DialogTitle>Edit Task: {task.title}</DialogTitle>
+            </DialogHeader>
+            <div className="py-4 space-y-4">
+                <div>
+                  <Label htmlFor="editTaskTitle">Task Title</Label>
+                  <Input id="editTaskTitle" value={editedTitle} onChange={(e) => setEditedTitle(e.target.value)} />
+                </div>
+                 <div>
+                  <Label htmlFor="editTaskReward">Reward</Label>
+                  <Input id="editTaskReward" type="number" value={editedReward} onChange={(e) => setEditedReward(e.target.value)} />
+                </div>
+                <div>
+                  <Label htmlFor="editTaskCooldown">Cooldown (seconds)</Label>
+                  <Input id="editTaskCooldown" type="number" value={editedCooldown} onChange={(e) => setEditedCooldown(e.target.value)} />
+                </div>
+                {(task.id === 'follow_twitter' || task.id === 'join_telegram') && (
+                  <div>
+                    <Label htmlFor="editTaskUrl">URL</Label>
+                    <Input id="editTaskUrl" value={editedUrl} onChange={(e) => setEditedUrl(e.target.value)} />
+                  </div>
+                )}
+                 <div>
+                  <Label htmlFor="editTaskHtml">HTML Content / Ad Code</Label>
+                  <Textarea 
+                    id="editTaskHtml" 
+                    value={editedHtml}
+                    onChange={(e) => setEditedHtml(e.target.value)} 
+                    rows={8}
+                    placeholder="Enter any HTML or ad script here."
+                  />
+                </div>
             </div>
-             <div>
-              <Label htmlFor="editTaskReward">Reward</Label>
-              <Input id="editTaskReward" type="number" value={editedReward} onChange={(e) => setEditedReward(e.target.value)} />
-            </div>
-            {task.id === 'follow_twitter' || task.id === 'join_telegram' ? (
-              <div>
-                <Label htmlFor="editTaskUrl">URL</Label>
-                <Input id="editTaskUrl" value={editedUrl} onChange={(e) => setEditedUrl(e.target.value)} />
-              </div>
-            ) : null}
-        </div>
-        <DialogFooter>
-            <Button onClick={handleEditSave}>Save Changes</Button>
-        </DialogFooter>
+            <DialogFooter>
+                <Button onClick={handleEditSave}>Save Changes</Button>
+            </DialogFooter>
         </DialogContent>
     </Dialog>
-    )}
     </>
   );
 };
@@ -404,25 +432,29 @@ export default function TasksTab() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTaskReward, setNewTaskReward] = useState('');
+  const [newTaskCooldown, setNewTaskCooldown] = useState('60');
   const [newTaskRequiresApproval, setNewTaskRequiresApproval] = useState(false);
 
   const handleAddTask = () => {
     const reward = parseInt(newTaskReward, 10);
-    if (!newTaskTitle || isNaN(reward) || reward <= 0) {
+    const cooldown = parseInt(newTaskCooldown, 10);
+
+    if (!newTaskTitle || isNaN(reward) || reward <= 0 || isNaN(cooldown) || cooldown < 0) {
       toast({
         title: 'Invalid Input',
-        description: 'Please provide a valid title and a positive reward amount.',
+        description: 'Please provide a valid title, a positive reward amount and a non-negative cooldown.',
         variant: 'destructive',
       });
       return;
     }
-    addTask({ title: newTaskTitle, reward, requiresApproval: newTaskRequiresApproval });
+    addTask({ title: newTaskTitle, reward, cooldown, requiresApproval: newTaskRequiresApproval });
     toast({
       title: 'Task Added',
       description: `Successfully added task: ${newTaskTitle}`,
     });
     setNewTaskTitle('');
     setNewTaskReward('');
+    setNewTaskCooldown('60');
     setNewTaskRequiresApproval(false);
     setIsDialogOpen(false);
   };
@@ -468,6 +500,16 @@ export default function TasksTab() {
                       value={newTaskReward} 
                       onChange={(e) => setNewTaskReward(e.target.value)} 
                       placeholder="e.g., 250"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="taskCooldown">Cooldown (seconds)</Label>
+                    <Input 
+                      id="taskCooldown" 
+                      type="number" 
+                      value={newTaskCooldown} 
+                      onChange={(e) => setNewTaskCooldown(e.target.value)} 
+                      placeholder="e.g., 60"
                     />
                   </div>
                   <div className="flex items-center space-x-2">

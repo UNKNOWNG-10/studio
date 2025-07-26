@@ -20,6 +20,7 @@ export type Task = {
   id: string;
   title: string;
   reward: number;
+  cooldown: number; // Cooldown in seconds
   icon?: string;
   url?: string;
   htmlContent?: string;
@@ -82,10 +83,11 @@ interface UserContextType {
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
 const initialTasks: Task[] = [
-  { id: 'follow_twitter', title: 'Follow us on X (Twitter)', reward: 500, icon: 'Twitter', url: 'https://x.com/pika_io' },
-  { id: 'join_telegram', title: 'Join our Telegram Channel', reward: 500, icon: 'Send', url: 'https://t.me/pika_io' },
-  { id: 'first_stake', title: 'Make your first stake', reward: 1000, icon: 'Gift' },
-  { id: 'submit_tweet', title: 'Tweet about Pika Token', reward: 1500, icon: 'Twitter', requiresApproval: true },
+  { id: 'follow_twitter', title: 'Follow us on X (Twitter)', reward: 500, icon: 'Twitter', url: 'https://x.com/pika_io', cooldown: 86400, },
+  { id: 'join_telegram', title: 'Join our Telegram Channel', reward: 500, icon: 'Send', url: 'https://t.me/pika_io', cooldown: 86400, },
+  { id: 'first_stake', title: 'Make your first stake', reward: 1000, icon: 'Gift', cooldown: 0 },
+  { id: 'submit_tweet', title: 'Tweet about Pika Token', reward: 1500, icon: 'Twitter', requiresApproval: true, cooldown: 0 },
+  { id: 'watch_ad', title: 'Watch an Ad', reward: 100, icon: 'Tv', htmlContent: '<p class="text-center">Your ad code here. Edit this in the admin task editor.</p>', cooldown: 60},
 ];
 
 const referralMilestones: ReferralMilestone[] = [
@@ -104,7 +106,7 @@ const referralMilestones: ReferralMilestone[] = [
 const ADMIN_UID = "admin_user_123";
 const FIVE_MINUTE_EARNING_RATE = 15;
 const MINIMUM_WITHDRAWAL_AMOUNT = 100000;
-const ONE_TIME_TASKS = ['follow_twitter', 'join_telegram', 'first_stake', 'submit_tweet'];
+const ONE_TIME_TASKS = ['first_stake', 'submit_tweet'];
 
 const UserProviderContent = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -456,8 +458,8 @@ const UserProviderContent = ({ children }: { children: ReactNode }) => {
       if (lastCompleted) return false; 
       if (taskId === 'first_stake' && user.stakedBalance <= 0) return false; 
     } else {
-       const cooldown = 60 * 1000;
-       if (lastCompleted && now.getTime() - new Date(lastCompleted).getTime() < cooldown) {
+       const cooldownMs = (task.cooldown || 60) * 1000;
+       if (lastCompleted && now.getTime() - new Date(lastCompleted).getTime() < cooldownMs) {
          return false;
        }
     }
