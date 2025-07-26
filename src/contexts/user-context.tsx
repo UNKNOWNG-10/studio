@@ -122,28 +122,21 @@ const UserProviderContent = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     try {
+      let allUsers: { [key: string]: User } = {};
       const storedUsers = localStorage.getItem('pikaTokenUsers');
       if (storedUsers) {
         try {
-          setUsers(JSON.parse(storedUsers));
+          allUsers = JSON.parse(storedUsers);
+          setUsers(allUsers);
         } catch (e) {
           console.error("Failed to parse users from localStorage", e);
           localStorage.removeItem('pikaTokenUsers');
         }
       }
 
-      const deviceUser = localStorage.getItem('pikaTokenDeviceUser');
-      if (deviceUser && storedUsers) {
-        try {
-          const allUsers = JSON.parse(storedUsers);
-          if (allUsers[deviceUser]) {
-            setUser(allUsers[deviceUser]);
-          }
-        } catch (e) {
-           console.error("Failed to parse device user from localStorage", e);
-           localStorage.removeItem('pikaTokenUsers');
-           localStorage.removeItem('pikaTokenDeviceUser');
-        }
+      const deviceUserUid = localStorage.getItem('pikaTokenDeviceUser');
+      if (deviceUserUid && allUsers[deviceUserUid]) {
+          setUser(allUsers[deviceUserUid]);
       }
 
       const storedTasks = localStorage.getItem('pikaTokenTasks');
@@ -153,6 +146,7 @@ const UserProviderContent = ({ children }: { children: ReactNode }) => {
         } catch (e) {
           console.error("Failed to parse tasks from localStorage", e);
           localStorage.removeItem('pikaTokenTasks');
+          setTasks(initialTasks);
         }
       } else {
         setTasks(initialTasks);
@@ -180,7 +174,6 @@ const UserProviderContent = ({ children }: { children: ReactNode }) => {
           localStorage.removeItem('pikaWithdrawalsEnabled');
         }
       }
-
 
     } catch (error) {
       console.error("An unexpected error occurred during initialization", error);
